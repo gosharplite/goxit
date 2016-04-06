@@ -1,6 +1,9 @@
 package board
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestLogBoard(t *testing.T) {
 
@@ -8,7 +11,7 @@ func TestLogBoard(t *testing.T) {
 
 	bh.Initialize(9)
 
-	bh.LogBoard()
+	fmt.Printf("%v", bh.LogBoard())
 
 	//	expected := "Hello Go!"
 	//	actual := hello()

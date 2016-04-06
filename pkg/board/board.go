@@ -1,8 +1,6 @@
 package board
 
-import (
-	"fmt"
-)
+import ()
 
 type BoardState int
 
@@ -98,15 +96,11 @@ func (board *BoardHarvard) initializeStates() {
 	//              #                       72
 }
 
-func (board *BoardHarvard) LogBoard() {
+func (board *BoardHarvard) LogBoard() string {
 
-	var line string
+	var line, result string
 
 	for i, s := range board.states {
-
-		//if i > 80 {
-		//      break
-		//}
 
 		var c string
 
@@ -124,11 +118,13 @@ func (board *BoardHarvard) LogBoard() {
 		}
 
 		if i%(board.SIZE+1) == 0 && i != 0 {
-			fmt.Printf("%v\n", line)
+			result += line + "\n"
 			line = c
 		} else {
 
 			line += c
 		}
 	}
+
+	return result
 }
