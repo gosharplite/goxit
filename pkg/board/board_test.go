@@ -6,10 +6,7 @@ import (
 
 func TestLogBoard(t *testing.T) {
 
-	bh, err := NewBoard(3)
-	if err != nil {
-		t.Error("Test failed")
-	}
+	bh := NewBoard(3)
 
 	expected := "####\n#...\n#...\n#...\n####\n"
 	actual := bh.LogBoard()

@@ -38,6 +38,12 @@ type BoardHarvard struct {
 	Depth             int
 }
 
+func NewBoard(size int) *BoardHarvard {
+	bh := BoardHarvard{}
+	bh.Initialize(size)
+	return &bh
+}
+
 func (board *BoardHarvard) Initialize(size int) {
 
 	board.SIZE = size
