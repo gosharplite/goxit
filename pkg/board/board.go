@@ -463,3 +463,124 @@ func (board *BoardHarvard) updateLiberties(chain *Chain) {
 		}
 	}
 }
+
+func (board *BoardHarvard) UndoMove() *MoveHistory {
+
+	if board.Depth == 0 {
+		return nil
+	}
+
+	moveHistory := board.move_history_list[board.Depth]
+
+	player := moveHistory.player
+
+	point := moveHistory.point
+
+	board.setEmpty(point)
+
+	board.ko_point = 0
+
+	// Same order as Direction in MoveHistory.
+	neighbors := []int{board.north(point), board.east(point), board.south(point), board.west(point)}
+
+	for i := 0; i < 4; i++ {
+
+		n := neighbors[i]
+
+		if board.states[n] == board.oppositePlayer(player) {
+
+			board.chains[n].addLiberty(point)
+
+		} else if board.states[n] == player {
+
+			chain := board.reconstructChain(n, player, point)
+
+			board.updateLibertiesAndChainReps(chain, player)
+		}
+
+		if moveHistory.isCapture_directions(i) == true {
+
+			np := board.oppositePlayer(player)
+
+			chain := board.reconstructChain(n, State_EMPTY, point)
+
+			for j := 0; j < chain.num_points; j++ {
+				board.states[chain.points[j]] = np
+			}
+
+			board.updateLibertiesAndChainReps(chain, np)
+
+			board.updateNeighboringChainsLiberties(chain)
+
+			// Update prisoners
+			if player == State_BLACK {
+				board.black_prisoners -= chain.num_points
+			} else if player == State_WHITE {
+				board.white_prisoners -= chain.num_points
+			}
+		}
+	}
+
+	board.ko_point = moveHistory.ko_point
+
+	board.Depth--
+
+	return moveHistory
+}
+
+func (board *BoardHarvard) reconstructChain(point int, player BoardState, original int) *Chain {
+
+	chain := Chain{}
+	chain.Initialize(board.SIZE)
+	chain.addPoint(point)
+
+	searchPoints := board.getneighbors(point)
+
+	for len(searchPoints) != 0 {
+
+		len := len(searchPoints)
+
+		for i := len - 1; i >= 0; i-- {
+
+			sp := searchPoints[i]
+
+			if board.states[sp] == player && chain.hasPoint(sp) == false && sp != original {
+
+				chain.addPoint(sp)
+
+				//for _, j := range board.getneighbors(sp) {
+
+				//      searchPoints = append(searchPoints, j)
+				//}
+
+				searchPoints = append(searchPoints, board.getneighbors(sp)...)
+			}
+
+			// remove sp
+			front := searchPoints[:i]
+			back := searchPoints[i+1:]
+
+			//searchPoints = front
+			//for _, j := range back {
+			//      searchPoints = append(searchPoints, j)
+			//}
+
+			searchPoints = append(front, back...)
+		}
+	}
+
+	return &chain
+}
+
+func (board *BoardHarvard) getneighbors(point int) []int {
+
+	result := make([]int, 0)
+
+	result = append(result,
+		board.north(point),
+		board.east(point),
+		board.south(point),
+		board.west(point))
+
+	return result
+}

@@ -29,3 +29,8 @@ func (history *MoveHistory) setCapture_directions(dir int) {
 
 	history.capture_directions[dir] = true
 }
+
+func (history *MoveHistory) isCapture_directions(dir int) bool {
+
+	return history.capture_directions[dir]
+}
