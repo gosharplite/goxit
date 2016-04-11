@@ -22,18 +22,26 @@ func TestLogBoard(t *testing.T) {
 	}
 }
 
-func TestProcessMove(t *testing.T) {
+func TestProcessMoveUndoMove(t *testing.T) {
 
-	type stone struct {
-		point int
-		state BoardState
+	bh := NewBoard(3)
+
+	bh.ProcessMove(5, State_BLACK)
+	bh.ProcessMove(6, State_WHITE)
+	bh.ProcessMove(10, State_BLACK)
+	bh.ProcessMove(9, State_WHITE)
+
+	actual := bh.LogBoard()
+	expected := "####\n#.O.\n#OX.\n#...\n####\n"
+	if actual != expected {
+		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
 
-	cases := map[string]struct {
-		size     int
-		points   stone
-		expected stone
-	}{
-		"simple point": {3, stone{5, State_BLACK}, stone{5, State_BLACK}},
+	bh.UndoMove()
+
+	actual = bh.LogBoard()
+	expected = "####\n#XO.\n#.X.\n#...\n####\n"
+	if actual != expected {
+		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
 }
