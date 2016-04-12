@@ -44,17 +44,17 @@ type Board struct {
 
 func New(size int) *Board {
 
-	bh := Board{}
-	bh.init(size)
+	bh := Board{
+		size:       size,
+		maxHistory: 600,
+	}
+	bh.init()
 	return &bh
 }
 
-func (bd *Board) init(size int) {
+func (bd *Board) init() {
 
-	bd.size = size
 	bd.boardSize = (bd.size+2)*(bd.size+1) + 1
-
-	bd.maxHistory = 600
 
 	// Index zero is not used.
 	bd.histories = make([]*History, bd.maxHistory+1)

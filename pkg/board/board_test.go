@@ -22,6 +22,70 @@ func TestString(t *testing.T) {
 	}
 }
 
+func TestMaxHistory(t *testing.T) {
+
+	bh := Board{
+		size:       3,
+		maxHistory: 1,
+	}
+	bh.init()
+
+	err := bh.DoBlack(5)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	err = bh.DoWhite(6)
+	if err == nil {
+		t.Error("maxHistory exceeded but not detected")
+	}
+}
+
+func TestIsEmpty(t *testing.T) {
+
+	bh := New(3)
+
+	err := bh.DoBlack(5)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	err = bh.DoWhite(5)
+	if err == nil {
+		t.Error("point is not empty but not detected")
+	}
+}
+
+func TestIsKo(t *testing.T) {
+
+	bh := New(3)
+
+	bh.DoBlack(5)
+	bh.DoBlack(7)
+	bh.DoBlack(10)
+
+	bh.DoWhite(9)
+	bh.DoWhite(6)
+
+	err := bh.DoBlack(5)
+	if err == nil {
+		t.Error("point is Ko but not detected")
+	}
+}
+
+func TestIsSuicide(t *testing.T) {
+
+	bh := New(3)
+
+	bh.DoBlack(6)
+	bh.DoBlack(9)
+
+	err := bh.DoWhite(5)
+	if err == nil {
+		t.Error("point is suicide but not detected")
+	}
+}
+
 func TestDo(t *testing.T) {
 
 	bh := New(3)
