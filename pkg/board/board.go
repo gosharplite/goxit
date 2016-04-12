@@ -1,89 +1,95 @@
 package board
 
-import ()
-
-type BoardState int
-
-const (
-	// State of a board intersection
-	State_BLACK BoardState = 1
-	State_WHITE BoardState = 2
-	State_EMPTY BoardState = 3
-	State_WALL  BoardState = 4
+import (
+	"errors"
 )
 
-type BoardHarvard struct {
+type state int
 
-	// Size parameters for a Go board
-	SIZE       int
-	BOARD_SIZE int //(SIZE+2)*(SIZE+1)+1;
+const (
+	black state = iota
+	white
+	empty
+	wall
+)
 
-	// Max number of previous moves to store
-	MAX_HISTORY int
+type Board struct {
 
-	// Arrays for storing states, chains, and chain representatives
-	states     []BoardState //BOARD_SIZE
-	chains     []*Chain     //BOARD_SIZE
-	chain_reps []int        //BOARD_SIZE. Zero if no chain.
+	// Size of Go board.
+	// boardSize = (size+2)*(size+1)+1
+	size      int
+	boardSize int
+
+	// Max number of previous moves to store.
+	maxHistory int
+
+	// Arrays for storing states, chains, and chain representatives.
+	// Array length is boardSize.
+	// chainReps - Zero if no chain.
+	states    []state
+	chains    []*Chain
+	chainReps []int
 
 	// Current ko point if exists, 0 otherwise
-	ko_point int
+	koPoint int
 
 	// Number of stones captured from each player
-	black_prisoners int
-	white_prisoners int
+	blackDead int
+	whiteDead int
 
 	// Move history list
-	move_history_list []*MoveHistory
-	Depth             int
+	histories []*History
+	depth     int
 }
 
-func NewBoard(size int) *BoardHarvard {
-	bh := BoardHarvard{}
-	bh.Initialize(size)
+func New(size int) *Board {
+
+	bh := Board{}
+	bh.init(size)
 	return &bh
 }
 
-func (board *BoardHarvard) Initialize(size int) {
+func (bd *Board) init(size int) {
 
-	board.SIZE = size
-	board.BOARD_SIZE = (board.SIZE+2)*(board.SIZE+1) + 1
+	bd.size = size
+	bd.boardSize = (bd.size+2)*(bd.size+1) + 1
 
-	board.MAX_HISTORY = 600
+	bd.maxHistory = 600
 
-	board.move_history_list = make([]*MoveHistory, board.MAX_HISTORY)
+	// Index zero is not used.
+	bd.histories = make([]*History, bd.maxHistory+1)
 
-	board.states = make([]BoardState, board.BOARD_SIZE)
+	bd.states = make([]state, bd.boardSize)
 
-	board.chains = make([]*Chain, board.BOARD_SIZE)
+	bd.chains = make([]*Chain, bd.boardSize)
 
-	board.chain_reps = make([]int, board.BOARD_SIZE)
+	bd.chainReps = make([]int, bd.boardSize)
 
-	board.initializeStates()
+	bd.initStates()
 }
 
-func (board *BoardHarvard) initializeStates() {
+func (bd *Board) initStates() {
 
-	for i := 0; i <= board.SIZE+2; i++ {
+	for i := 0; i <= bd.size+2; i++ {
 
-		leadPosition := i * (board.SIZE + 1)
+		leadPosition := i * (bd.size + 1)
 
-		if i == 0 || i == board.SIZE+1 {
+		if i == 0 || i == bd.size+1 {
 
-			for j := leadPosition; j < leadPosition+(board.SIZE+1); j++ {
-				board.states[j] = State_WALL
+			for j := leadPosition; j < leadPosition+(bd.size+1); j++ {
+				bd.states[j] = wall
 			}
 
-		} else if i == board.SIZE+2 {
+		} else if i == bd.size+2 {
 
-			board.states[leadPosition] = State_WALL
+			bd.states[leadPosition] = wall
 
 		} else {
 
-			board.states[leadPosition] = State_WALL
+			bd.states[leadPosition] = wall
 
-			for j := leadPosition + 1; j < leadPosition+(board.SIZE+1); j++ {
-				board.states[j] = State_EMPTY
+			for j := leadPosition + 1; j < leadPosition+(bd.size+1); j++ {
+				bd.states[j] = empty
 			}
 		}
 	}
@@ -102,28 +108,28 @@ func (board *BoardHarvard) initializeStates() {
 	//              #                       72
 }
 
-func (board *BoardHarvard) LogBoard() string {
+func (bd *Board) String() string {
 
 	var line, result string
 
-	for i, s := range board.states {
+	for i, s := range bd.states {
 
 		var c string
 
 		switch s {
-		case State_EMPTY:
+		case empty:
 			c = "."
-		case State_WALL:
+		case wall:
 			c = "#"
-		case State_BLACK:
+		case black:
 			c = "X"
-		case State_WHITE:
+		case white:
 			c = "O"
 		default:
 			c = "?"
 		}
 
-		if i%(board.SIZE+1) == 0 && i != 0 {
+		if i%(bd.size+1) == 0 && i != 0 {
 			result += line + "\n"
 			line = c
 		} else {
@@ -135,107 +141,131 @@ func (board *BoardHarvard) LogBoard() string {
 	return result
 }
 
-func (board *BoardHarvard) ProcessMove(point int, player BoardState) bool {
+func (bd *Board) DoBlack(pt int) error {
 
-	isLegal := true
+	return bd.do(pt, black)
+}
 
-	if board.isLegalMove(point, player) == false {
-		return false
+func (bd *Board) DoWhite(pt int) error {
+
+	return bd.do(pt, white)
+}
+
+func (bd *Board) do(pt int, clr state) error {
+
+	err := bd.isLegal(pt, clr)
+	if err != nil {
+		return err
 	}
 
-	// Initialize MoveHistory
-	moveHistory := MoveHistory{}
-	moveHistory.Initialize(player, point, board.ko_point)
+	// Initialize history
+	history := History{}
+	history.Init(clr, pt, bd.koPoint)
 
-	// Initialize new chain
+	// Initialize chain
 	chain := Chain{}
-	chain.Initialize(board.SIZE)
-	chain.addPoint(point)
+	chain.Init(bd.size)
+	chain.addPoint(pt)
 
 	captured := Chain{}
-	captured.Initialize(board.SIZE)
+	captured.Init(bd.size)
 
 	// Same order as Direction in MoveHistory.
-	neighbors := []int{board.north(point), board.east(point), board.south(point), board.west(point)}
+	neighbors := []int{bd.north(pt), bd.east(pt), bd.south(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
 		n := neighbors[i]
 
-		if board.states[n] == State_EMPTY {
+		if bd.states[n] == empty {
 
 			chain.addLiberty(n)
 
-		} else if board.states[n] == player && chain.hasPoint(n) == false {
+		} else if bd.states[n] == clr && chain.hasPoint(n) == false {
 
-			chain = *board.joinChains(&chain, board.chains[n])
+			chain = *bd.joinChains(&chain, bd.chains[n])
 
-			board.updateLibertiesAndChainReps(&chain, player)
+			bd.updateLibertiesAndChainReps(&chain, clr)
 
-		} else if board.states[n] == board.oppositePlayer(player) {
+		} else if bd.states[n] == bd.oppositePlayer(clr) {
 
-			nc := board.chains[n]
+			nc := bd.chains[n]
 
-			if nc.num_liberties == 1 {
+			if nc.numLiberties == 1 {
 
-				board.removeFromBoard(nc)
+				bd.removeFromBoard(nc)
 
-				board.updatePrisoners(nc, player)
+				bd.updatePrisoners(nc, clr)
 
 				//Push
-				for j := 0; j < nc.num_points; j++ {
+				for j := 0; j < nc.numPoints; j++ {
 
 					ncp := nc.points[j]
 
 					captured.addPoint(ncp)
 				}
-				board.updateNeighboringChainsLiberties(nc)
 
-				moveHistory.setCapture_directions(i)
+				bd.updateNeighboringChainsLiberties(nc)
+
+				history.setCaptureDirections(i)
 			}
 		}
 	}
 
-	board.updateLibertiesAndChainReps(&chain, player)
-	board.updateNeighboringChainsLiberties(&chain)
+	bd.updateLibertiesAndChainReps(&chain, clr)
 
-	if captured.num_points == 1 && chain.num_points == 1 { // Paper is wrong about Ko.
+	bd.updateNeighboringChainsLiberties(&chain)
 
-		board.ko_point = captured.points[0]
+	if captured.numPoints == 1 && chain.numPoints == 1 {
+
+		bd.koPoint = captured.points[0]
 
 	} else {
 
-		board.ko_point = 0
+		bd.koPoint = 0
 	}
 
-	board.Depth++
+	bd.depth++
 
-	board.move_history_list[board.Depth] = &moveHistory
+	bd.histories[bd.depth] = &history
 
-	return isLegal
+	return nil
 }
 
-func (board *BoardHarvard) isLegalMove(point int, player BoardState) bool {
+func (bd *Board) isLegal(pt int, clr state) error {
 
-	return board.isEmpty(point) == true &&
-		board.isKo(point, player) == false &&
-		board.isNotSuicide(point, player) == true
+	if bd.depth >= bd.maxHistory {
+		return errors.New("depth is larger than maxHistory")
+	}
 
-	return false
+	if bd.isEmpty(pt) == false {
+		return errors.New("point is not empty")
+	}
+
+	if bd.isKo(pt, clr) == true {
+		return errors.New("point is Ko")
+	}
+
+	if bd.isSuicide(pt, clr) == true {
+		return errors.New("point is suicide")
+	}
+
+	return nil
 }
 
-func (board *BoardHarvard) isEmpty(point int) bool {
-	return board.states[point] == State_EMPTY
+func (bd *Board) isEmpty(pt int) bool {
+
+	return bd.states[pt] == empty
 }
 
-func (board *BoardHarvard) isKo(point int, player BoardState) bool {
+func (bd *Board) isKo(pt int, clr state) bool {
 
 	result := false
 
-	if point == board.ko_point {
+	if pt == bd.koPoint {
 
 		// This is for game ending winner fill in self ko.
-		if board.isAdjacentSelfChainWithTwoPlusLiberties(point, player) == false {
+		if bd.isAdjacentSelfChainWithTwoPlusLiberties(pt, clr) == false {
 			result = true
 		}
 	}
@@ -243,34 +273,32 @@ func (board *BoardHarvard) isKo(point int, player BoardState) bool {
 	return result
 }
 
-func (board *BoardHarvard) isNotSuicide(point int, player BoardState) bool {
+func (bd *Board) isSuicide(pt int, clr state) bool {
 
-	bisAdjacentEmpty := board.isAdjacentEmpty(point)
+	bisAdjacentEmpty := bd.isAdjacentEmpty(pt)
 
-	bisAdjacentSelfChainWithTwoPlusLiberties := board.isAdjacentSelfChainWithTwoPlusLiberties(point, player)
+	bisAdjacentSelfChainWithTwoPlusLiberties := bd.isAdjacentSelfChainWithTwoPlusLiberties(pt, clr)
 
-	bisAdjacentEnemyChainWithOneLiberty := board.isAdjacentEnemyChainWithOneLiberty(point, player)
+	bisAdjacentEnemyChainWithOneLiberty := bd.isAdjacentEnemyChainWithOneLiberty(pt, clr)
 
-	return bisAdjacentEmpty ||
+	return !(bisAdjacentEmpty ||
 		bisAdjacentSelfChainWithTwoPlusLiberties ||
-		bisAdjacentEnemyChainWithOneLiberty
-
-	return false
+		bisAdjacentEnemyChainWithOneLiberty)
 }
 
-func (board *BoardHarvard) isAdjacentSelfChainWithTwoPlusLiberties(point int, player BoardState) bool {
+func (bd *Board) isAdjacentSelfChainWithTwoPlusLiberties(pt int, clr state) bool {
 
 	result := false
 
-	neighbors := []int{board.north(point), board.south(point), board.east(point), board.west(point)}
+	neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
 		n := neighbors[i]
 
-		if board.states[n] == player {
+		if bd.states[n] == clr {
 
-			if board.chains[n].num_liberties >= 2 {
+			if bd.chains[n].numLiberties >= 2 {
 
 				result = true
 
@@ -282,27 +310,27 @@ func (board *BoardHarvard) isAdjacentSelfChainWithTwoPlusLiberties(point int, pl
 	return result
 }
 
-func (board *BoardHarvard) isAdjacentEmpty(point int) bool {
+func (bd *Board) isAdjacentEmpty(pt int) bool {
 
-	return board.states[board.north(point)] == State_EMPTY ||
-		board.states[board.south(point)] == State_EMPTY ||
-		board.states[board.east(point)] == State_EMPTY ||
-		board.states[board.west(point)] == State_EMPTY
+	return bd.states[bd.north(pt)] == empty ||
+		bd.states[bd.south(pt)] == empty ||
+		bd.states[bd.east(pt)] == empty ||
+		bd.states[bd.west(pt)] == empty
 }
 
-func (board *BoardHarvard) isAdjacentEnemyChainWithOneLiberty(point int, player BoardState) bool {
+func (bd *Board) isAdjacentEnemyChainWithOneLiberty(pt int, clr state) bool {
 
 	result := false
 
-	neighbors := []int{board.north(point), board.south(point), board.east(point), board.west(point)}
+	neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
 		n := neighbors[i]
 
-		if board.states[n] == board.oppositePlayer(player) {
+		if bd.states[n] == bd.oppositePlayer(clr) {
 
-			if board.chains[n].num_liberties == 1 {
+			if bd.chains[n].numLiberties == 1 {
 
 				result = true
 
@@ -314,227 +342,225 @@ func (board *BoardHarvard) isAdjacentEnemyChainWithOneLiberty(point int, player 
 	return result
 }
 
-func (board *BoardHarvard) north(point int) int {
-	return point - (board.SIZE + 1)
+func (bd *Board) north(pt int) int {
+
+	return pt - (bd.size + 1)
 }
 
-func (board *BoardHarvard) south(point int) int {
-	return point + (board.SIZE + 1)
+func (bd *Board) south(pt int) int {
+
+	return pt + (bd.size + 1)
 }
 
-func (board *BoardHarvard) east(point int) int {
-	return point + 1
+func (bd *Board) east(pt int) int {
+
+	return pt + 1
 }
 
-func (board *BoardHarvard) west(point int) int {
-	return point - 1
+func (bd *Board) west(pt int) int {
+
+	return pt - 1
 }
 
-func (board *BoardHarvard) oppositePlayer(player BoardState) BoardState {
+func (bd *Board) oppositePlayer(clr state) state {
 
-	result := player
+	result := clr
 
-	if player == State_BLACK {
-		result = State_WHITE
+	if clr == black {
+		result = white
 	} else {
-		result = State_BLACK
+		result = black
 	}
 
 	return result
 }
 
-func (board *BoardHarvard) joinChains(c1 *Chain, c2 *Chain) *Chain {
+func (bd *Board) joinChains(c1 *Chain, c2 *Chain) *Chain {
 
 	// Add points and liberties of c2 to c1.
-	for i := 0; i < c2.num_points; i++ {
+	for i := 0; i < c2.numPoints; i++ {
 		c1.addPoint(c2.points[i])
 	}
 
 	return c1
 }
 
-func (board *BoardHarvard) updateLibertiesAndChainReps(chain *Chain, player BoardState) {
+func (bd *Board) updateLibertiesAndChainReps(c *Chain, clr state) {
 
-	for i := 0; i < chain.num_points; i++ {
+	for i := 0; i < c.numPoints; i++ {
 
-		point := chain.points[i]
+		point := c.points[i]
 
 		// Update states, chains, chain_reps
-		board.states[point] = player
+		bd.states[point] = clr
 
-		board.chains[point] = chain
+		bd.chains[point] = c
 
-		board.chain_reps[point] = chain.points[0]
+		bd.chainReps[point] = c.points[0]
 	}
 
-	for i := 0; i < chain.num_points; i++ {
+	for i := 0; i < c.numPoints; i++ {
 
-		point := chain.points[i]
+		pt := c.points[i]
 
 		// Update liberties.
-		neighbors := []int{board.north(point), board.south(point), board.east(point), board.west(point)}
+		neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 		for j := 0; j < 4; j++ {
 
 			n := neighbors[j]
 
-			if board.states[n] == State_EMPTY {
-				chain.addLiberty(n)
+			if bd.states[n] == empty {
+				c.addLiberty(n)
 			}
 		}
 	}
 }
 
-func (board *BoardHarvard) removeFromBoard(chain *Chain) {
+func (bd *Board) removeFromBoard(c *Chain) {
 
-	//slog.Debug("num_points: %v", chain.num_points)
+	for i := 0; i < c.numPoints; i++ {
 
-	for i := 0; i < chain.num_points; i++ {
+		pt := c.points[i]
 
-		//slog.Debug("i: %v", i)
-
-		point := chain.points[i]
-
-		//slog.Debug("point: %v, %v", i, point)
-
-		board.setEmpty(point)
+		bd.setEmpty(pt)
 	}
 }
 
-func (board *BoardHarvard) updatePrisoners(nc *Chain, player BoardState) {
+func (bd *Board) updatePrisoners(nc *Chain, clr state) {
 
-	if player == State_BLACK {
-		board.black_prisoners += nc.num_points
-	} else if player == State_WHITE {
-		board.white_prisoners += nc.num_points
+	if clr == black {
+		bd.blackDead += nc.numPoints
+	} else if clr == white {
+		bd.whiteDead += nc.numPoints
 	}
 }
 
-func (board *BoardHarvard) updateNeighboringChainsLiberties(chain *Chain) {
+func (bd *Board) updateNeighboringChainsLiberties(c *Chain) {
 
-	for i := 0; i < chain.num_points; i++ {
+	for i := 0; i < c.numPoints; i++ {
 
-		point := chain.points[i]
+		pt := c.points[i]
 
 		// Update liberties.
-		neighbors := []int{board.north(point), board.south(point), board.east(point), board.west(point)}
+		neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 		for j := 0; j < 4; j++ {
 
 			n := neighbors[j]
 
-			board.updateLiberties(board.chains[n])
+			bd.updateLiberties(bd.chains[n])
 		}
 	}
 }
 
-func (board *BoardHarvard) setEmpty(point int) {
+func (bd *Board) setEmpty(pt int) {
 
-	board.states[point] = State_EMPTY
-	board.chains[point] = nil
-	board.chain_reps[point] = 0
+	bd.states[pt] = empty
+	bd.chains[pt] = nil
+	bd.chainReps[pt] = 0
 }
 
-func (board *BoardHarvard) updateLiberties(chain *Chain) {
+func (bd *Board) updateLiberties(c *Chain) {
 
-	if chain == nil {
+	if c == nil {
 		return
 	}
 
-	for i := 0; i < chain.num_points; i++ {
+	for i := 0; i < c.numPoints; i++ {
 
-		point := chain.points[i]
+		pt := c.points[i]
 
 		// Update liberties.
-		neighbors := []int{board.north(point), board.south(point), board.east(point), board.west(point)}
+		neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 		for j := 0; j < 4; j++ {
 
 			n := neighbors[j]
 
-			if board.states[n] == State_EMPTY {
+			if bd.states[n] == empty {
 
-				chain.addLiberty(n)
+				c.addLiberty(n)
 
 			} else {
 
-				chain.removeLiberty(n) // This is needed for unknown Neighbors.
+				c.removeLiberty(n) // This is needed for unknown Neighbors.
 			}
 		}
 	}
 }
 
-func (board *BoardHarvard) UndoMove() *MoveHistory {
+func (bd *Board) Undo() error {
 
-	if board.Depth == 0 {
-		return nil
+	if bd.depth == 0 {
+		return errors.New("no history")
 	}
 
-	moveHistory := board.move_history_list[board.Depth]
+	h := bd.histories[bd.depth]
 
-	player := moveHistory.player
+	clr := h.color
 
-	point := moveHistory.point
+	pt := h.point
 
-	board.setEmpty(point)
+	bd.setEmpty(pt)
 
-	board.ko_point = 0
+	bd.koPoint = 0
 
-	// Same order as Direction in MoveHistory.
-	neighbors := []int{board.north(point), board.east(point), board.south(point), board.west(point)}
+	// Same order as Direction in History.
+	neighbors := []int{bd.north(pt), bd.east(pt), bd.south(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
 		n := neighbors[i]
 
-		if board.states[n] == board.oppositePlayer(player) {
+		if bd.states[n] == bd.oppositePlayer(clr) {
 
-			board.chains[n].addLiberty(point)
+			bd.chains[n].addLiberty(pt)
 
-		} else if board.states[n] == player {
+		} else if bd.states[n] == clr {
 
-			chain := board.reconstructChain(n, player, point)
+			chain := bd.reconstructChain(n, clr, pt)
 
-			board.updateLibertiesAndChainReps(chain, player)
+			bd.updateLibertiesAndChainReps(chain, clr)
 		}
 
-		if moveHistory.isCapture_directions(i) == true {
+		if h.isCaptureDirections(i) == true {
 
-			np := board.oppositePlayer(player)
+			np := bd.oppositePlayer(clr)
 
-			chain := board.reconstructChain(n, State_EMPTY, point)
+			chain := bd.reconstructChain(n, empty, pt)
 
-			for j := 0; j < chain.num_points; j++ {
-				board.states[chain.points[j]] = np
+			for j := 0; j < chain.numPoints; j++ {
+				bd.states[chain.points[j]] = np
 			}
 
-			board.updateLibertiesAndChainReps(chain, np)
+			bd.updateLibertiesAndChainReps(chain, np)
 
-			board.updateNeighboringChainsLiberties(chain)
+			bd.updateNeighboringChainsLiberties(chain)
 
 			// Update prisoners
-			if player == State_BLACK {
-				board.black_prisoners -= chain.num_points
-			} else if player == State_WHITE {
-				board.white_prisoners -= chain.num_points
+			if clr == black {
+				bd.blackDead -= chain.numPoints
+			} else if clr == white {
+				bd.whiteDead -= chain.numPoints
 			}
 		}
 	}
 
-	board.ko_point = moveHistory.ko_point
+	bd.koPoint = h.koPoint
 
-	board.Depth--
+	bd.depth--
 
-	return moveHistory
+	return nil
 }
 
-func (board *BoardHarvard) reconstructChain(point int, player BoardState, original int) *Chain {
+func (bd *Board) reconstructChain(pt int, clr state, original int) *Chain {
 
 	chain := Chain{}
-	chain.Initialize(board.SIZE)
-	chain.addPoint(point)
+	chain.Init(bd.size)
+	chain.addPoint(pt)
 
-	searchPoints := board.getneighbors(point)
+	searchPoints := bd.getneighbors(pt)
 
 	for len(searchPoints) != 0 {
 
@@ -544,26 +570,16 @@ func (board *BoardHarvard) reconstructChain(point int, player BoardState, origin
 
 			sp := searchPoints[i]
 
-			if board.states[sp] == player && chain.hasPoint(sp) == false && sp != original {
+			if bd.states[sp] == clr && chain.hasPoint(sp) == false && sp != original {
 
 				chain.addPoint(sp)
 
-				//for _, j := range board.getneighbors(sp) {
-
-				//      searchPoints = append(searchPoints, j)
-				//}
-
-				searchPoints = append(searchPoints, board.getneighbors(sp)...)
+				searchPoints = append(searchPoints, bd.getneighbors(sp)...)
 			}
 
 			// remove sp
 			front := searchPoints[:i]
 			back := searchPoints[i+1:]
-
-			//searchPoints = front
-			//for _, j := range back {
-			//      searchPoints = append(searchPoints, j)
-			//}
 
 			searchPoints = append(front, back...)
 		}
@@ -572,15 +588,15 @@ func (board *BoardHarvard) reconstructChain(point int, player BoardState, origin
 	return &chain
 }
 
-func (board *BoardHarvard) getneighbors(point int) []int {
+func (bd *Board) getneighbors(pt int) []int {
 
 	result := make([]int, 0)
 
 	result = append(result,
-		board.north(point),
-		board.east(point),
-		board.south(point),
-		board.west(point))
+		bd.north(pt),
+		bd.east(pt),
+		bd.south(pt),
+		bd.west(pt))
 
 	return result
 }

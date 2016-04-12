@@ -2,35 +2,37 @@ package board
 
 import ()
 
-type MoveHistory struct {
-	player BoardState
-	point  int
+type History struct {
+
+	// Data to be recorded.
+	color state
+	point int
 
 	// Ko point before move was played
-	ko_point int
+	koPoint int
 
 	// capture directions[d] = true if and only if
 	// a capture occurred in the direction d from point
-	capture_directions []bool
+	captureDirections []bool
 }
 
-func (history *MoveHistory) Initialize(player BoardState, point int, ko_point int) {
+func (h *History) Init(clr state, pt int, koPoint int) {
 
-	history.player = player
+	h.color = clr
 
-	history.point = point
+	h.point = pt
 
-	history.ko_point = ko_point
+	h.koPoint = koPoint
 
-	history.capture_directions = []bool{false, false, false, false}
+	h.captureDirections = []bool{false, false, false, false}
 }
 
-func (history *MoveHistory) setCapture_directions(dir int) {
+func (h *History) setCaptureDirections(dir int) {
 
-	history.capture_directions[dir] = true
+	h.captureDirections[dir] = true
 }
 
-func (history *MoveHistory) isCapture_directions(dir int) bool {
+func (h *History) isCaptureDirections(dir int) bool {
 
-	return history.capture_directions[dir]
+	return h.captureDirections[dir]
 }
