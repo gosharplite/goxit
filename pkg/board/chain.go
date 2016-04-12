@@ -15,7 +15,7 @@ type Chain struct {
 
 	// Data members for keeping track of points
 	// points length = maxPoints
-	// pointsIndices = boardSize
+	// pointsIndices length = boardSize
 	points        []int
 	numPoints     int
 	pointsIndices []int
