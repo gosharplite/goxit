@@ -1,9 +1,16 @@
+/*
+Package board implement a library for placing stones on a Go game board.
+
+It is inspired by 'Move Prediction in the Game of Go'. A thesis presented by Brett Alexander Harrison.
+http://www.eecs.harvard.edu/econcs/pubs/Harrisonthesis.pdf
+*/
 package board
 
 import (
 	"errors"
 )
 
+// state represents status of an intersection.
 type state int
 
 const (
@@ -13,6 +20,7 @@ const (
 	wall
 )
 
+// A Board contains data of a Go board.
 type Board struct {
 
 	// Size of Go board.
@@ -42,6 +50,7 @@ type Board struct {
 	depth     int
 }
 
+// New create a Board object.
 func New(size int) *Board {
 
 	bh := Board{
