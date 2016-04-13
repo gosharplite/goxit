@@ -72,23 +72,23 @@ func (bd *Board) initStates() {
 
 	for i := 0; i <= bd.size+2; i++ {
 
-		leadPosition := i * (bd.size + 1)
+		lead := i * (bd.size + 1)
 
 		if i == 0 || i == bd.size+1 {
 
-			for j := leadPosition; j < leadPosition+(bd.size+1); j++ {
+			for j := lead; j < lead+(bd.size+1); j++ {
 				bd.states[j] = wall
 			}
 
 		} else if i == bd.size+2 {
 
-			bd.states[leadPosition] = wall
+			bd.states[lead] = wall
 
 		} else {
 
-			bd.states[leadPosition] = wall
+			bd.states[lead] = wall
 
-			for j := leadPosition + 1; j < leadPosition+(bd.size+1); j++ {
+			for j := lead + 1; j < lead+(bd.size+1); j++ {
 				bd.states[j] = empty
 			}
 		}
@@ -159,33 +159,35 @@ func (bd *Board) do(pt int, clr state) error {
 	}
 
 	// Initialize history
-	history := History{}
-	history.Init(clr, pt, bd.koPoint)
+	h := History{}
+	h.Init(clr, pt, bd.koPoint)
 
 	// Initialize chain
-	chain := Chain{}
-	chain.Init(bd.size)
-	chain.addPoint(pt)
+	c := Chain{}
+	c.Init(bd.size)
+	c.addPoint(pt)
 
-	captured := Chain{}
-	captured.Init(bd.size)
+	// Initalize captured
+	cp := Chain{}
+	cp.Init(bd.size)
 
+	// neighbors of point
 	// Same order as Direction in MoveHistory.
-	neighbors := []int{bd.north(pt), bd.east(pt), bd.south(pt), bd.west(pt)}
+	nb := []int{bd.north(pt), bd.east(pt), bd.south(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
-		n := neighbors[i]
+		n := nb[i]
 
 		if bd.states[n] == empty {
 
-			chain.addLiberty(n)
+			c.addLiberty(n)
 
-		} else if bd.states[n] == clr && chain.hasPoint(n) == false {
+		} else if bd.states[n] == clr && c.hasPoint(n) == false {
 
-			chain = *bd.joinChains(&chain, bd.chains[n])
+			c = *bd.joinChains(&c, bd.chains[n])
 
-			bd.updateLibertiesAndChainReps(&chain, clr)
+			bd.updateLibertiesAndChainReps(&c, clr)
 
 		} else if bd.states[n] == bd.oppositePlayer(clr) {
 
@@ -202,23 +204,23 @@ func (bd *Board) do(pt int, clr state) error {
 
 					ncp := nc.points[j]
 
-					captured.addPoint(ncp)
+					cp.addPoint(ncp)
 				}
 
 				bd.updateNeighboringChainsLiberties(nc)
 
-				history.setCaptureDirections(i)
+				h.setCaptureDirections(i)
 			}
 		}
 	}
 
-	bd.updateLibertiesAndChainReps(&chain, clr)
+	bd.updateLibertiesAndChainReps(&c, clr)
 
-	bd.updateNeighboringChainsLiberties(&chain)
+	bd.updateNeighboringChainsLiberties(&c)
 
-	if captured.numPoints == 1 && chain.numPoints == 1 {
+	if cp.numPoints == 1 && c.numPoints == 1 {
 
-		bd.koPoint = captured.points[0]
+		bd.koPoint = cp.points[0]
 
 	} else {
 
@@ -227,7 +229,7 @@ func (bd *Board) do(pt int, clr state) error {
 
 	bd.depth++
 
-	bd.histories[bd.depth] = &history
+	bd.histories[bd.depth] = &h
 
 	return nil
 }
@@ -275,39 +277,37 @@ func (bd *Board) isKo(pt int, clr state) bool {
 
 func (bd *Board) isSuicide(pt int, clr state) bool {
 
-	bisAdjacentEmpty := bd.isAdjacentEmpty(pt)
+	b1 := bd.isAdjacentEmpty(pt)
 
-	bisAdjacentSelfChainWithTwoPlusLiberties := bd.isAdjacentSelfChainWithTwoPlusLiberties(pt, clr)
+	b2 := bd.isAdjacentSelfChainWithTwoPlusLiberties(pt, clr)
 
-	bisAdjacentEnemyChainWithOneLiberty := bd.isAdjacentEnemyChainWithOneLiberty(pt, clr)
+	b3 := bd.isAdjacentEnemyChainWithOneLiberty(pt, clr)
 
-	return !(bisAdjacentEmpty ||
-		bisAdjacentSelfChainWithTwoPlusLiberties ||
-		bisAdjacentEnemyChainWithOneLiberty)
+	return !(b1 || b2 || b3)
 }
 
 func (bd *Board) isAdjacentSelfChainWithTwoPlusLiberties(pt int, clr state) bool {
 
-	result := false
+	r := false
 
-	neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
+	nb := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
-		n := neighbors[i]
+		n := nb[i]
 
 		if bd.states[n] == clr {
 
 			if bd.chains[n].numLiberties >= 2 {
 
-				result = true
+				r = true
 
 				break
 			}
 		}
 	}
 
-	return result
+	return r
 }
 
 func (bd *Board) isAdjacentEmpty(pt int) bool {
@@ -320,26 +320,26 @@ func (bd *Board) isAdjacentEmpty(pt int) bool {
 
 func (bd *Board) isAdjacentEnemyChainWithOneLiberty(pt int, clr state) bool {
 
-	result := false
+	r := false
 
-	neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
+	nb := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
-		n := neighbors[i]
+		n := nb[i]
 
 		if bd.states[n] == bd.oppositePlayer(clr) {
 
 			if bd.chains[n].numLiberties == 1 {
 
-				result = true
+				r = true
 
 				break
 			}
 		}
 	}
 
-	return result
+	return r
 }
 
 func (bd *Board) north(pt int) int {
@@ -364,15 +364,15 @@ func (bd *Board) west(pt int) int {
 
 func (bd *Board) oppositePlayer(clr state) state {
 
-	result := clr
+	r := clr
 
 	if clr == black {
-		result = white
+		r = white
 	} else {
-		result = black
+		r = black
 	}
 
-	return result
+	return r
 }
 
 func (bd *Board) joinChains(c1 *Chain, c2 *Chain) *Chain {
@@ -389,14 +389,14 @@ func (bd *Board) updateLibertiesAndChainReps(c *Chain, clr state) {
 
 	for i := 0; i < c.numPoints; i++ {
 
-		point := c.points[i]
+		pt := c.points[i]
 
 		// Update states, chains, chain_reps
-		bd.states[point] = clr
+		bd.states[pt] = clr
 
-		bd.chains[point] = c
+		bd.chains[pt] = c
 
-		bd.chainReps[point] = c.points[0]
+		bd.chainReps[pt] = c.points[0]
 	}
 
 	for i := 0; i < c.numPoints; i++ {
@@ -443,11 +443,11 @@ func (bd *Board) updateNeighboringChainsLiberties(c *Chain) {
 		pt := c.points[i]
 
 		// Update liberties.
-		neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
+		nb := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 		for j := 0; j < 4; j++ {
 
-			n := neighbors[j]
+			n := nb[j]
 
 			bd.updateLiberties(bd.chains[n])
 		}
@@ -472,11 +472,11 @@ func (bd *Board) updateLiberties(c *Chain) {
 		pt := c.points[i]
 
 		// Update liberties.
-		neighbors := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
+		nb := []int{bd.north(pt), bd.south(pt), bd.east(pt), bd.west(pt)}
 
 		for j := 0; j < 4; j++ {
 
-			n := neighbors[j]
+			n := nb[j]
 
 			if bd.states[n] == empty {
 
@@ -507,11 +507,11 @@ func (bd *Board) Undo() error {
 	bd.koPoint = 0
 
 	// Same order as Direction in History.
-	neighbors := []int{bd.north(pt), bd.east(pt), bd.south(pt), bd.west(pt)}
+	nb := []int{bd.north(pt), bd.east(pt), bd.south(pt), bd.west(pt)}
 
 	for i := 0; i < 4; i++ {
 
-		n := neighbors[i]
+		n := nb[i]
 
 		if bd.states[n] == bd.oppositePlayer(clr) {
 
@@ -528,21 +528,21 @@ func (bd *Board) Undo() error {
 
 			np := bd.oppositePlayer(clr)
 
-			chain := bd.reconstructChain(n, empty, pt)
+			c := bd.reconstructChain(n, empty, pt)
 
-			for j := 0; j < chain.numPoints; j++ {
-				bd.states[chain.points[j]] = np
+			for j := 0; j < c.numPoints; j++ {
+				bd.states[c.points[j]] = np
 			}
 
-			bd.updateLibertiesAndChainReps(chain, np)
+			bd.updateLibertiesAndChainReps(c, np)
 
-			bd.updateNeighboringChainsLiberties(chain)
+			bd.updateNeighboringChainsLiberties(c)
 
 			// Update prisoners
 			if clr == black {
-				bd.blackDead -= chain.numPoints
+				bd.blackDead -= c.numPoints
 			} else if clr == white {
-				bd.whiteDead -= chain.numPoints
+				bd.whiteDead -= c.numPoints
 			}
 		}
 	}
@@ -556,47 +556,45 @@ func (bd *Board) Undo() error {
 
 func (bd *Board) reconstructChain(pt int, clr state, original int) *Chain {
 
-	chain := Chain{}
-	chain.Init(bd.size)
-	chain.addPoint(pt)
+	c := Chain{}
+	c.Init(bd.size)
+	c.addPoint(pt)
 
-	searchPoints := bd.getneighbors(pt)
+	// searchPoints
+	sps := bd.getneighbors(pt)
 
-	for len(searchPoints) != 0 {
+	for len(sps) != 0 {
 
-		len := len(searchPoints)
+		len := len(sps)
 
 		for i := len - 1; i >= 0; i-- {
 
-			sp := searchPoints[i]
+			sp := sps[i]
 
-			if bd.states[sp] == clr && chain.hasPoint(sp) == false && sp != original {
+			if bd.states[sp] == clr && c.hasPoint(sp) == false && sp != original {
 
-				chain.addPoint(sp)
+				c.addPoint(sp)
 
-				searchPoints = append(searchPoints, bd.getneighbors(sp)...)
+				sps = append(sps, bd.getneighbors(sp)...)
 			}
 
 			// remove sp
-			front := searchPoints[:i]
-			back := searchPoints[i+1:]
-
-			searchPoints = append(front, back...)
+			sps = append(sps[:i], sps[i+1:]...)
 		}
 	}
 
-	return &chain
+	return &c
 }
 
 func (bd *Board) getneighbors(pt int) []int {
 
-	result := make([]int, 0)
+	r := make([]int, 0)
 
-	result = append(result,
+	r = append(r,
 		bd.north(pt),
 		bd.east(pt),
 		bd.south(pt),
 		bd.west(pt))
 
-	return result
+	return r
 }

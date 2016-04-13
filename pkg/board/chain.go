@@ -92,10 +92,10 @@ func (c *Chain) removeLiberty(pt int) {
 	}
 
 	// swap last liberty with current liberty
-	index := c.libertiesIndices[pt]
-	end_liberty := c.liberties[c.numLiberties-1]
-	c.liberties[index] = end_liberty
-	c.libertiesIndices[end_liberty] = index
+	i := c.libertiesIndices[pt]
+	j := c.liberties[c.numLiberties-1]
+	c.liberties[i] = j
+	c.libertiesIndices[j] = i
 
 	// remove point
 	c.liberties[c.numLiberties-1] = 0
