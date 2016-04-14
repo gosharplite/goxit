@@ -2,8 +2,8 @@ package board
 
 import ()
 
-// A Chain represents a group of points.
-type Chain struct {
+// A chain represents a group of points.
+type chain struct {
 
 	// Size is used for array length estimation.
 	size      int
@@ -29,16 +29,15 @@ type Chain struct {
 	libertiesIndices []int
 }
 
-// NewChain creates a Chain object.
-func NewChain(size int) Chain {
+func newChain(size int) chain {
 
-	c := Chain{}
+	c := chain{}
 	c.init(size)
 
 	return c
 }
 
-func (c *Chain) init(size int) {
+func (c *chain) init(size int) {
 
 	c.size = size
 	c.boardSize = (c.size+2)*(c.size+1) + 1
@@ -62,7 +61,7 @@ func (c *Chain) init(size int) {
 	}
 }
 
-func (c *Chain) addPoint(pt int) {
+func (c *chain) addPoint(pt int) {
 
 	// if point is in chain, do nothing
 	if c.pointsIndices[pt] != -1 {
@@ -75,7 +74,7 @@ func (c *Chain) addPoint(pt int) {
 	c.numPoints++
 }
 
-func (c *Chain) addLiberty(pt int) {
+func (c *chain) addLiberty(pt int) {
 
 	// if point is in chain, do nothing
 	if c.libertiesIndices[pt] != -1 {
@@ -89,12 +88,12 @@ func (c *Chain) addLiberty(pt int) {
 	c.numLiberties++
 }
 
-func (c *Chain) hasPoint(pt int) bool {
+func (c *chain) hasPoint(pt int) bool {
 
 	return c.pointsIndices[pt] != -1
 }
 
-func (c *Chain) removeLiberty(pt int) {
+func (c *chain) removeLiberty(pt int) {
 
 	// if point is not in chain, do nothing
 	if c.libertiesIndices[pt] == -1 {

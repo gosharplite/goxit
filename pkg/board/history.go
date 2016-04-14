@@ -1,8 +1,6 @@
 package board
 
-import ()
-
-type History struct {
+type history struct {
 
 	// Data to be recorded.
 	color state
@@ -16,7 +14,9 @@ type History struct {
 	captureDirections []bool
 }
 
-func (h *History) Init(clr state, pt int, koPoint int) {
+func newHistory(clr state, pt int, koPoint int) history {
+
+	h := history{}
 
 	h.color = clr
 
@@ -25,14 +25,16 @@ func (h *History) Init(clr state, pt int, koPoint int) {
 	h.koPoint = koPoint
 
 	h.captureDirections = []bool{false, false, false, false}
+
+	return h
 }
 
-func (h *History) setCaptureDirections(dir int) {
+func (h *history) setCaptureDirections(dir int) {
 
 	h.captureDirections[dir] = true
 }
 
-func (h *History) isCaptureDirections(dir int) bool {
+func (h *history) isCaptureDirections(dir int) bool {
 
 	return h.captureDirections[dir]
 }
