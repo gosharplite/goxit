@@ -37,7 +37,7 @@ A Board contains data of a Go board.
 */
 type Board struct {
 
-	// Size of Go board. boardSize = (size+2)*(size+1)+1
+	// boardSize = (size+2)*(size+1)+1
 	size      int
 	boardSize int
 
@@ -506,7 +506,7 @@ func (bd *Board) Undo() error {
 
 			chain := bd.reconstructChain(n, clr, pt)
 
-			bd.updateLibertiesAndChainReps(chain, clr)
+			bd.updateLibertiesAndChainReps(&chain, clr)
 		}
 
 		if h.isCaptureDirections(i) == true {
@@ -519,9 +519,9 @@ func (bd *Board) Undo() error {
 				bd.states[c.points[j]] = np
 			}
 
-			bd.updateLibertiesAndChainReps(c, np)
+			bd.updateLibertiesAndChainReps(&c, np)
 
-			bd.updateNeighboringChainsLiberties(c)
+			bd.updateNeighboringChainsLiberties(&c)
 
 			// Update prisoners
 			if clr == black {
@@ -539,13 +539,13 @@ func (bd *Board) Undo() error {
 	return nil
 }
 
-func (bd *Board) reconstructChain(pt int, clr state, original int) *chain {
+func (bd *Board) reconstructChain(pt int, clr state, original int) chain {
 
 	c := newChain(bd.size)
+
 	c.addPoint(pt)
 
-	// searchPoints
-	sps := bd.neighbors(pt)
+	sps := []int{pt}
 
 	for len(sps) != 0 {
 
@@ -567,7 +567,7 @@ func (bd *Board) reconstructChain(pt int, clr state, original int) *chain {
 		}
 	}
 
-	return &c
+	return c
 }
 
 // neighbors returns surrounding points with order north/east/south/west.
