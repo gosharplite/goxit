@@ -1,5 +1,5 @@
 /*
-Package board implement a library for placing stones on a Go game board.
+Package board provides a library for placing stones on a Go game board.
 
 It is inspired by 'Move Prediction in the Game of Go'. A thesis presented by Brett Alexander Harrison.
 http://www.eecs.harvard.edu/econcs/pubs/Harrisonthesis.pdf
