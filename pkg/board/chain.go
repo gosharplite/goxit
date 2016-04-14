@@ -2,6 +2,7 @@ package board
 
 import ()
 
+// A Chain represents a group of points.
 type Chain struct {
 
 	// Size is used for array length estimation.
@@ -28,7 +29,16 @@ type Chain struct {
 	libertiesIndices []int
 }
 
-func (c *Chain) Init(size int) {
+// NewChain creates a Chain object.
+func NewChain(size int) Chain {
+
+	c := Chain{}
+	c.init(size)
+
+	return c
+}
+
+func (c *Chain) init(size int) {
 
 	c.size = size
 	c.boardSize = (c.size+2)*(c.size+1) + 1

@@ -20,7 +20,22 @@ const (
 	wall
 )
 
-// A Board contains data of a Go board.
+/*
+A Board contains data of a Go board.
+
+	7 by 7 board example.
+
+	# # # # # # # #         00 01 02 03 04 05 06 07
+	# . . . . . . .         08 09 10 11 12 13 14 15
+	# . . . . . . .         16 17 18 19 20 21 22 23
+	# . . . . . . .         24 25 26 27 28 29 30 31
+	# . . . . . . .         32 33 34 35 36 37 38 39
+	# . . . . . . .         40 41 42 43 44 45 46 47
+	# . . . . . . .         48 49 50 51 52 53 54 55
+	# . . . . . . .         56 57 58 59 60 61 62 63
+	# # # # # # # #         64 65 66 67 68 69 70 71
+	#                       72
+*/
 type Board struct {
 
 	// Size of Go board.
@@ -41,24 +56,25 @@ type Board struct {
 	// Current ko point if exists, 0 otherwise
 	koPoint int
 
-	// Number of stones captured from each player
+	// Number of stones captured
 	blackDead int
 	whiteDead int
 
-	// Move history list
+	// Move history
 	histories []*History
 	depth     int
 }
 
-// New create a Board object.
-func New(size int) *Board {
+// NewBoard create a Board object.
+func NewBoard(size int) Board {
 
 	bh := Board{
 		size:       size,
 		maxHistory: 600,
 	}
 	bh.init()
-	return &bh
+
+	return bh
 }
 
 func (bd *Board) init() {
@@ -102,21 +118,9 @@ func (bd *Board) initStates() {
 			}
 		}
 	}
-
-	//              7 by 7 example.
-	//
-	//              # # # # # # # #         00 01 02 03 04 05 06 07
-	//              # . . . . . . .         08 09 10 11 12 13 14 15
-	//              # . . . . . . .         16 17 18 19 20 21 22 23
-	//              # . . . . . . .         24 25 26 27 28 29 30 31
-	//              # . . . . . . .         32 33 34 35 36 37 38 39
-	//              # . . . . . . .         40 41 42 43 44 45 46 47
-	//              # . . . . . . .         48 49 50 51 52 53 54 55
-	//              # . . . . . . .         56 57 58 59 60 61 62 63
-	//              # # # # # # # #         64 65 66 67 68 69 70 71
-	//              #                       72
 }
 
+// String is the text representation of current board state.
 func (bd *Board) String() string {
 
 	var line, result string
@@ -150,11 +154,13 @@ func (bd *Board) String() string {
 	return result
 }
 
+// DoBlack puts a black stone on a point.
 func (bd *Board) DoBlack(pt int) error {
 
 	return bd.do(pt, black)
 }
 
+// DoWhite puts a white stone on a point.
 func (bd *Board) DoWhite(pt int) error {
 
 	return bd.do(pt, white)
@@ -172,13 +178,11 @@ func (bd *Board) do(pt int, clr state) error {
 	h.Init(clr, pt, bd.koPoint)
 
 	// Initialize chain
-	c := Chain{}
-	c.Init(bd.size)
+	c := NewChain(bd.size)
 	c.addPoint(pt)
 
 	// Initalize captured
-	cp := Chain{}
-	cp.Init(bd.size)
+	cp := NewChain(bd.size)
 
 	// neighbors of point
 	// Same order as Direction in MoveHistory.
@@ -499,6 +503,7 @@ func (bd *Board) updateLiberties(c *Chain) {
 	}
 }
 
+// Undo remove the last stone placed on the Go board.
 func (bd *Board) Undo() error {
 
 	if bd.depth == 0 {
@@ -565,8 +570,7 @@ func (bd *Board) Undo() error {
 
 func (bd *Board) reconstructChain(pt int, clr state, original int) *Chain {
 
-	c := Chain{}
-	c.Init(bd.size)
+	c := NewChain(bd.size)
 	c.addPoint(pt)
 
 	// searchPoints

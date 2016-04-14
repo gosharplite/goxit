@@ -14,7 +14,7 @@ func TestString(t *testing.T) {
 	}
 
 	for k, tc := range cases {
-		bh := New(tc.size)
+		bh := NewBoard(tc.size)
 		actual := bh.String()
 		if actual != tc.expected {
 			t.Errorf("%s: size %d,\n actual\n%s\n expected\n%s", k, tc.size, actual, tc.expected)
@@ -43,7 +43,7 @@ func TestMaxHistory(t *testing.T) {
 
 func TestIsEmpty(t *testing.T) {
 
-	bh := New(3)
+	bh := NewBoard(3)
 
 	err := bh.DoBlack(5)
 	if err != nil {
@@ -58,7 +58,7 @@ func TestIsEmpty(t *testing.T) {
 
 func TestIsKo(t *testing.T) {
 
-	bh := New(3)
+	bh := NewBoard(3)
 
 	bh.DoBlack(5)
 	bh.DoBlack(7)
@@ -75,7 +75,7 @@ func TestIsKo(t *testing.T) {
 
 func TestIsSuicide(t *testing.T) {
 
-	bh := New(3)
+	bh := NewBoard(3)
 
 	bh.DoBlack(6)
 	bh.DoBlack(9)
@@ -88,7 +88,7 @@ func TestIsSuicide(t *testing.T) {
 
 func TestDo(t *testing.T) {
 
-	bh := New(3)
+	bh := NewBoard(3)
 
 	bh.DoBlack(5)
 	bh.DoWhite(6)
