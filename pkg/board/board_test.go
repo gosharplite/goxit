@@ -140,3 +140,29 @@ func TestCapture(t *testing.T) {
 		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
 }
+
+var result Board
+
+func BenchmarkCapture(b *testing.B) {
+
+	var bh Board
+
+	for n := 0; n < b.N; n++ {
+		bh = NewBoard(3)
+
+		bh.DoBlack(5)
+		bh.DoBlack(6)
+		bh.DoBlack(9)
+		bh.DoBlack(10)
+
+		bh.DoWhite(7)
+		bh.DoWhite(11)
+		bh.DoWhite(13)
+		bh.DoWhite(15)
+
+		bh.DoWhite(14)
+		bh.Undo()
+	}
+
+	result = bh
+}
