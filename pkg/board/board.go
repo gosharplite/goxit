@@ -468,8 +468,8 @@ func (bd *Board) updateLiberties(c *chain) {
 				c.addLiberty(n)
 
 			} else {
-
-				c.removeLiberty(n) // This is needed for unknown Neighbors.
+				// This is needed for unknown Neighbors.
+				c.removeLiberty(n)
 			}
 		}
 	}
@@ -545,7 +545,7 @@ func (bd *Board) reconstructChain(pt int, clr state, original int) chain {
 
 	c.addPoint(pt)
 
-	sps := []int{pt}
+	sps := bd.neighbors(pt)
 
 	for len(sps) != 0 {
 

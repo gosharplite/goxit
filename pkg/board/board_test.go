@@ -109,3 +109,34 @@ func TestDo(t *testing.T) {
 		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
 }
+
+func TestCapture(t *testing.T) {
+
+	bh := NewBoard(3)
+
+	bh.DoBlack(5)
+	bh.DoBlack(6)
+	bh.DoBlack(9)
+	bh.DoBlack(10)
+
+	bh.DoWhite(7)
+	bh.DoWhite(11)
+	bh.DoWhite(13)
+	bh.DoWhite(15)
+
+	bh.DoWhite(14)
+
+	actual := bh.String()
+	expected := "####\n#..O\n#..O\n#OOO\n####\n"
+	if actual != expected {
+		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
+	}
+
+	bh.Undo()
+
+	actual = bh.String()
+	expected = "####\n#XXO\n#XXO\n#O.O\n####\n"
+	if actual != expected {
+		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
+	}
+}

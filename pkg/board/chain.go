@@ -63,12 +63,12 @@ func (c *chain) init(size int) {
 
 func (c *chain) addPoint(pt int) {
 
-	// if point is in chain, do nothing
 	if c.pointsIndices[pt] != -1 {
 		return
 	}
 
 	c.points[c.numPoints] = pt
+
 	c.pointsIndices[pt] = c.numPoints
 
 	c.numPoints++
@@ -76,7 +76,6 @@ func (c *chain) addPoint(pt int) {
 
 func (c *chain) addLiberty(pt int) {
 
-	// if point is in chain, do nothing
 	if c.libertiesIndices[pt] != -1 {
 		return
 	}
@@ -95,7 +94,6 @@ func (c *chain) hasPoint(pt int) bool {
 
 func (c *chain) removeLiberty(pt int) {
 
-	// if point is not in chain, do nothing
 	if c.libertiesIndices[pt] == -1 {
 		return
 	}
