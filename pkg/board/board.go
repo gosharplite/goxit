@@ -44,9 +44,7 @@ type Board struct {
 	// Max number of previous moves to store.
 	maxHistory int
 
-	// Arrays for storing states, chains, and chain representatives.
-	// Array length is boardSize.
-	// chainReps - Zero if no chain.
+	// Array length is boardSize. chainReps - Zero if no chain.
 	states    []state
 	chains    []*chain
 	chainReps []int
@@ -121,7 +119,7 @@ func (bd *Board) initStates() {
 // String is the text representation of current board state.
 func (bd *Board) String() string {
 
-	var line, result string
+	var r string
 
 	for i, s := range bd.states {
 
@@ -140,16 +138,14 @@ func (bd *Board) String() string {
 			c = "?"
 		}
 
-		if i%(bd.size+1) == 0 && i != 0 {
-			result += line + "\n"
-			line = c
-		} else {
+		r += c
 
-			line += c
+		if (i+1)%(bd.size+1) == 0 && i != 0 {
+			r += "\n"
 		}
 	}
 
-	return result
+	return r
 }
 
 // DoBlack puts a black stone on a point.
@@ -504,9 +500,9 @@ func (bd *Board) Undo() error {
 
 		} else if bd.states[n] == clr {
 
-			chain := bd.reconstructChain(n, clr, pt)
+			c := bd.reconstructChain(n, clr, pt)
 
-			bd.updateLibertiesAndChainReps(&chain, clr)
+			bd.updateLibertiesAndChainReps(&c, clr)
 		}
 
 		if h.isCaptureDirections(i) == true {

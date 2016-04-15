@@ -10,7 +10,7 @@ func TestString(t *testing.T) {
 		size     int
 		expected string
 	}{
-		"3x3": {3, "####\n#...\n#...\n#...\n####\n"},
+		"3x3": {3, "####\n#...\n#...\n#...\n####\n#"},
 	}
 
 	for k, tc := range cases {
@@ -96,7 +96,7 @@ func TestDo(t *testing.T) {
 	bh.DoWhite(9)
 
 	actual := bh.String()
-	expected := "####\n#.O.\n#OX.\n#...\n####\n"
+	expected := "####\n#.O.\n#OX.\n#...\n####\n#"
 	if actual != expected {
 		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
@@ -104,13 +104,13 @@ func TestDo(t *testing.T) {
 	bh.Undo()
 
 	actual = bh.String()
-	expected = "####\n#XO.\n#.X.\n#...\n####\n"
+	expected = "####\n#XO.\n#.X.\n#...\n####\n#"
 	if actual != expected {
 		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
 }
 
-func TestCapture(t *testing.T) {
+func TestCapture1(t *testing.T) {
 
 	bh := NewBoard(3)
 
@@ -127,7 +127,7 @@ func TestCapture(t *testing.T) {
 	bh.DoWhite(14)
 
 	actual := bh.String()
-	expected := "####\n#..O\n#..O\n#OOO\n####\n"
+	expected := "####\n#..O\n#..O\n#OOO\n####\n#"
 	if actual != expected {
 		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
@@ -135,7 +135,44 @@ func TestCapture(t *testing.T) {
 	bh.Undo()
 
 	actual = bh.String()
-	expected = "####\n#XXO\n#XXO\n#O.O\n####\n"
+	expected = "####\n#XXO\n#XXO\n#O.O\n####\n#"
+	if actual != expected {
+		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
+	}
+}
+
+func TestCapture2(t *testing.T) {
+
+	bh := NewBoard(7)
+
+	bh.DoBlack(26)
+	bh.DoBlack(33)
+	bh.DoBlack(35)
+	bh.DoBlack(36)
+	bh.DoBlack(42)
+
+	bh.DoWhite(18)
+	bh.DoWhite(25)
+	bh.DoWhite(27)
+	bh.DoWhite(28)
+	bh.DoWhite(37)
+	bh.DoWhite(41)
+	bh.DoWhite(43)
+	bh.DoWhite(44)
+	bh.DoWhite(50)
+
+	bh.DoWhite(34)
+
+	actual := bh.String()
+	expected := "########\n#.......\n#.O.....\n#O.OO...\n#.O..O..\n#O.OO...\n#.O.....\n#.......\n########\n#"
+	if actual != expected {
+		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
+	}
+
+	bh.Undo()
+
+	actual = bh.String()
+	expected = "########\n#.......\n#.O.....\n#OXOO...\n#X.XXO..\n#OXOO...\n#.O.....\n#.......\n########\n#"
 	if actual != expected {
 		t.Errorf("\n actual\n%s\n expected\n%s", actual, expected)
 	}
