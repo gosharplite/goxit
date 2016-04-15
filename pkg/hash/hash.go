@@ -12,121 +12,129 @@ Canonical hash value means same value will be found if the pattern is mirrored, 
 package hash
 
 import (
+	"fmt"
 	"github.com/willf/bitset"
 )
 
+// A Pattern contains data of a Go game situation.
 type Pattern struct {
-	bounding_box_size int
+	size int
 
-	Black_pattern *bitset.BitSet
-	White_pattern *bitset.BitSet
+	black *bitset.BitSet
+	white *bitset.BitSet
 
-	black_BitSets []*bitset.BitSet
-	white_BitSets []*bitset.BitSet
+	blacks []*bitset.BitSet
+	whites []*bitset.BitSet
 
-	horizontal  []int
-	rotation90  []int
-	rotation180 []int
-	rotation270 []int
+	mirror []int
+	rot90  []int
+	rot180 []int
+	rot270 []int
 
 	prime  int64
 	celing int64
 }
 
-func (pattern *Pattern) Initialize(size int) {
+func NewPattern(size int) Pattern {
 
-	pattern.bounding_box_size = size
+	p := Pattern{}
+	p.init(size)
 
-	pattern.Black_pattern = bitset.New(uint(size * size))
-
-	pattern.White_pattern = bitset.New(uint(size * size))
-
-	pattern.horizontal = []int{1, 0, 0, -1}
-	pattern.rotation90 = []int{0, -1, 1, 0}
-	pattern.rotation180 = []int{-1, 0, 0, -1}
-	pattern.rotation270 = []int{0, 1, -1, 0}
-
-	pattern.prime = 13
-	pattern.celing = (9223372036854775807 - 4294967295) / pattern.prime
+	return p
 }
 
-func (pattern *Pattern) SetBlack(x, y int) {
+func (p *Pattern) init(size int) {
 
-	q := uint(y*pattern.bounding_box_size + x)
+	p.size = size
 
-	pattern.Black_pattern.Set(q)
+	p.black = bitset.New(uint(size * size))
+
+	p.white = bitset.New(uint(size * size))
+
+	p.mirror = []int{1, 0, 0, -1}
+	p.rot90 = []int{0, -1, 1, 0}
+	p.rot180 = []int{-1, 0, 0, -1}
+	p.rot270 = []int{0, 1, -1, 0}
+
+	p.prime = 13
+	p.celing = (9223372036854775807 - 4294967295) / p.prime
 }
 
-func (pattern *Pattern) SetWhite(x, y int) {
+func (p *Pattern) SetBlack(x, y int) {
 
-	q := uint(y*pattern.bounding_box_size + x)
+	q := uint(y*p.size + x)
 
-	pattern.White_pattern.Set(q)
+	p.black.Set(q)
 }
 
-func (pattern *Pattern) Canonical() {
+func (p *Pattern) SetWhite(x, y int) {
 
-	// Find canonical pattern.
-	length := uint(pattern.bounding_box_size * pattern.bounding_box_size)
+	q := uint(y*p.size + x)
 
-	// Initialize BitSet arrays.
-	pattern.black_BitSets = pattern.initializeBitSetArrays(pattern.Black_pattern, length)
-	pattern.white_BitSets = pattern.initializeBitSetArrays(pattern.White_pattern, length)
+	p.white.Set(q)
+}
 
-	for i := uint(0); i < length; i++ {
+func (p *Pattern) canonical() {
 
-		if pattern.Black_pattern.Test(i) {
-			pattern.translateBit(i, pattern.black_BitSets)
+	l := uint(p.size * p.size)
+
+	p.blacks = p.initBitSet(p.black, l)
+	p.whites = p.initBitSet(p.white, l)
+
+	for i := uint(0); i < l; i++ {
+
+		if p.black.Test(i) {
+			p.translate(i, p.blacks)
 		}
 
-		if pattern.White_pattern.Test(i) {
-			pattern.translateBit(i, pattern.white_BitSets)
+		if p.white.Test(i) {
+			p.translate(i, p.whites)
 		}
 	}
 
 	// Reverse color
 	for i := 8; i < 16; i++ {
 
-		pattern.black_BitSets[i] = pattern.white_BitSets[i-8]
+		p.blacks[i] = p.whites[i-8]
 
-		pattern.white_BitSets[i] = pattern.black_BitSets[i-8]
+		p.whites[i] = p.blacks[i-8]
 	}
 
 	// Find canonical
-	black_canonical := pattern.Black_pattern
-	white_canonical := pattern.White_pattern
+	bc := p.black
+	wc := p.white
 
-	BW_canonical := pattern.combineBitSets(length, black_canonical, white_canonical)
+	bwc := p.combineBitSet(l, bc, wc)
 
 	for j := 1; j < 16; j++ {
 
-		BW_current := pattern.combineBitSets(length, pattern.black_BitSets[j], pattern.white_BitSets[j])
+		a := p.combineBitSet(l, p.blacks[j], p.whites[j])
 
-		BW_compare := bitset.New(length * 2)
-		BW_compare = BW_compare.Union(BW_canonical)
+		b := bitset.New(l * 2)
+		b = b.Union(bwc)
 
-		BW_compare = BW_compare.SymmetricDifference(BW_current) // Find different bits.
+		// Find different bits.
+		b = b.SymmetricDifference(a)
 
 		// Check first true bit.
-		firstDiffenrence := pattern.nextSetBit(0, BW_compare)
-		if firstDiffenrence >= 0 {
+		n := p.nextSetBit(0, b)
+		if n >= 0 {
 
-			if BW_canonical.Test(uint(firstDiffenrence)) == false {
+			if bwc.Test(uint(n)) == false {
 
-				black_canonical = pattern.black_BitSets[j]
-				white_canonical = pattern.white_BitSets[j]
+				bc = p.blacks[j]
+				wc = p.whites[j]
 
-				BW_canonical = BW_current
+				bwc = a
 			}
 		}
 	}
 
-	// Set canonical pattern
-	pattern.Black_pattern = black_canonical
-	pattern.White_pattern = white_canonical
+	p.black = bc
+	p.white = wc
 }
 
-func (pattern *Pattern) initializeBitSetArrays(bitSet *bitset.BitSet, length uint) []*bitset.BitSet {
+func (p *Pattern) initBitSet(bitSet *bitset.BitSet, length uint) []*bitset.BitSet {
 
 	result := []*bitset.BitSet{
 		bitSet, // 0
@@ -150,21 +158,21 @@ func (pattern *Pattern) initializeBitSetArrays(bitSet *bitset.BitSet, length uin
 	return result
 }
 
-func (pattern *Pattern) translateBit(i uint, bitSet []*bitset.BitSet) {
+func (p *Pattern) translate(i uint, bitSet []*bitset.BitSet) {
 
 	// Define transformation matices.
-	tranlation := []int{-pattern.bounding_box_size / 2, -pattern.bounding_box_size / 2}
-	tranlationInverse := []int{pattern.bounding_box_size / 2, pattern.bounding_box_size / 2}
+	t := []int{-p.size / 2, -p.size / 2}
+	tInv := []int{p.size / 2, p.size / 2}
 
 	// Transform coordinate.
-	x := int(i) / pattern.bounding_box_size
-	y := int(i) % pattern.bounding_box_size
+	x := int(i) / p.size
+	y := int(i) % p.size
 
 	for j := 1; j < 8; j++ {
 
 		// Translation
-		xt := x + tranlation[0]
-		yt := y + tranlation[1]
+		xt := x + t[0]
+		yt := y + t[1]
 
 		// Rotation
 		xr := xt
@@ -173,28 +181,28 @@ func (pattern *Pattern) translateBit(i uint, bitSet []*bitset.BitSet) {
 		switch j {
 
 		case 1:
-			xr = pattern.rotation90[0]*xt + pattern.rotation90[1]*yt
-			yr = pattern.rotation90[2]*xt + pattern.rotation90[3]*yt
+			xr = p.rot90[0]*xt + p.rot90[1]*yt
+			yr = p.rot90[2]*xt + p.rot90[3]*yt
 
 		case 2:
-			xr = pattern.rotation180[0]*xt + pattern.rotation180[1]*yt
-			yr = pattern.rotation180[2]*xt + pattern.rotation180[3]*yt
+			xr = p.rot180[0]*xt + p.rot180[1]*yt
+			yr = p.rot180[2]*xt + p.rot180[3]*yt
 
 		case 3:
-			xr = pattern.rotation270[0]*xt + pattern.rotation270[1]*yt
-			yr = pattern.rotation270[2]*xt + pattern.rotation270[3]*yt
+			xr = p.rot270[0]*xt + p.rot270[1]*yt
+			yr = p.rot270[2]*xt + p.rot270[3]*yt
 
 		case 5:
-			xr = pattern.rotation90[0]*xt + pattern.rotation90[1]*yt
-			yr = pattern.rotation90[2]*xt + pattern.rotation90[3]*yt
+			xr = p.rot90[0]*xt + p.rot90[1]*yt
+			yr = p.rot90[2]*xt + p.rot90[3]*yt
 
 		case 6:
-			xr = pattern.rotation180[0]*xt + pattern.rotation180[1]*yt
-			yr = pattern.rotation180[2]*xt + pattern.rotation180[3]*yt
+			xr = p.rot180[0]*xt + p.rot180[1]*yt
+			yr = p.rot180[2]*xt + p.rot180[3]*yt
 
 		case 7:
-			xr = pattern.rotation270[0]*xt + pattern.rotation270[1]*yt
-			yr = pattern.rotation270[2]*xt + pattern.rotation270[3]*yt
+			xr = p.rot270[0]*xt + p.rot270[1]*yt
+			yr = p.rot270[2]*xt + p.rot270[3]*yt
 		}
 
 		// Horizontal mirror.
@@ -202,124 +210,125 @@ func (pattern *Pattern) translateBit(i uint, bitSet []*bitset.BitSet) {
 		yh := yr
 
 		if j > 3 {
-			xh = pattern.horizontal[0]*xr + pattern.horizontal[1]*yr
-			yh = pattern.horizontal[2]*xr + pattern.horizontal[3]*yr
+			xh = p.mirror[0]*xr + p.mirror[1]*yr
+			yh = p.mirror[2]*xr + p.mirror[3]*yr
 		}
 
 		// Translation inverse.
-		xt = xh + tranlationInverse[0]
-		yt = yh + tranlationInverse[1]
+		xt = xh + tInv[0]
+		yt = yh + tInv[1]
 
 		// set bit.
-		q := uint(xt*pattern.bounding_box_size + yt)
+		q := uint(xt*p.size + yt)
 		bitSet[j].Set(q)
 	}
 }
 
-func (pattern *Pattern) combineBitSets(length uint, bitSet1 *bitset.BitSet, bitSet2 *bitset.BitSet) *bitset.BitSet {
+func (p *Pattern) combineBitSet(length uint, b1 *bitset.BitSet, b2 *bitset.BitSet) *bitset.BitSet {
 
-	result := bitset.New(length * 2)
+	r := bitset.New(length * 2)
 
-	result = result.Union(bitSet2)
+	r = r.Union(b2)
 
-	for i := pattern.nextSetBit(0, bitSet1); i >= 0; i = pattern.nextSetBit(i+1, bitSet1) {
+	for i := p.nextSetBit(0, b1); i >= 0; i = p.nextSetBit(i+1, b1) {
 		// operate on index i here
-		result.Set(uint(i) + length)
+		r.Set(uint(i) + length)
 	}
 
-	return result
+	return r
 }
 
-func (pattern *Pattern) nextSetBit(index int, bitSet *bitset.BitSet) int {
+func (p *Pattern) nextSetBit(index int, b *bitset.BitSet) int {
 
-	result := -1
+	r := -1
 
-	for i := index; i < pattern.bounding_box_size*pattern.bounding_box_size; i++ {
+	for i := index; i < p.size*p.size; i++ {
 
-		if bitSet.Test(uint(i)) {
+		if b.Test(uint(i)) {
 
-			result = int(i)
+			r = int(i)
 
 			break
 		}
 	}
 
-	return result
+	return r
 }
 
-func (pattern *Pattern) GetHashMax() int64 {
+func (p *Pattern) GetHash() int64 {
 
-	blacks := pattern.bits2longs(pattern.Black_pattern)
-	whites := pattern.bits2longs(pattern.White_pattern)
+	b := p.bit2long(p.black)
+	w := p.bit2long(p.white)
 
-	result := int64(1)
+	r := int64(1)
 
-	for i := 0; i < len(blacks); i++ {
-		result = (pattern.prime*result + blacks[i]) % pattern.celing
+	for i := 0; i < len(b); i++ {
+		r = (p.prime*r + b[i]) % p.celing
 	}
 
-	for i := 0; i < len(whites); i++ {
-		result = (pattern.prime*result + whites[i]) % pattern.celing
+	for i := 0; i < len(w); i++ {
+		r = (p.prime*r + w[i]) % p.celing
 	}
 
-	result = pattern.prime*result + int64(pattern.bounding_box_size)
+	r = p.prime*r + int64(p.size)
 
-	return result
+	return r
 }
 
-func (pattern *Pattern) bits2longs(bs *bitset.BitSet) []int64 {
+func (p *Pattern) bit2long(b *bitset.BitSet) []int64 {
 
-	length := uint(pattern.bounding_box_size * pattern.bounding_box_size)
+	l := uint(p.size * p.size)
 
 	// This is to include all bits.
-	var arSize uint
-	if length%32 == 0 {
-		arSize = length / 32
+	var s uint
+	if l%32 == 0 {
+		s = l / 32
 	} else {
-		arSize = length/32 + 1
+		s = l/32 + 1
 	}
 
-	result := make([]int64, arSize)
+	r := make([]int64, s)
 
-	for i := 0; i < int(arSize); i++ {
+	for i := 0; i < int(s); i++ {
 
 		for j := 0; j < 32; j++ {
 
-			index := i*32 + j
+			n := i*32 + j
 
-			if uint(index) < length {
-				if bs.Test(uint(index)) {
-					result[i] |= 1 << uint(j) // Max is 4294967295L
+			if uint(n) < l {
+				if b.Test(uint(n)) {
+					// Max is 4294967295L
+					r[i] |= 1 << uint(j)
 				}
 			}
 		}
 	}
 
-	return result
+	return r
 }
 
-func (pattern *Pattern) LogBoard(bitSet1 *bitset.BitSet, bitSet2 *bitset.BitSet) {
+func (p *Pattern) string(b1 *bitset.BitSet, b2 *bitset.BitSet) {
 
 	var line string
 
-	l := uint(pattern.bounding_box_size * pattern.bounding_box_size)
+	l := uint(p.size * p.size)
 
 	for i := uint(0); i < l; i++ {
 
 		var c string
 
-		if bitSet1.Test(i) && bitSet2.Test(i) {
+		if b1.Test(i) && b2.Test(i) {
 			c = "#"
-		} else if bitSet1.Test(i) {
+		} else if b1.Test(i) {
 			c = "X"
-		} else if bitSet2.Test(i) {
+		} else if b2.Test(i) {
 			c = "O"
 		} else {
 			c = "."
 		}
 
-		if i%uint(pattern.bounding_box_size) == 0 && i != 0 {
-			//slog.Debug("%v", line)
+		if i%uint(p.size) == 0 && i != 0 {
+			fmt.Printf("%v\n", line)
 			line = c
 		} else {
 

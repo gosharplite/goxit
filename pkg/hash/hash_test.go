@@ -6,8 +6,7 @@ import (
 
 func TestCanonical(t *testing.T) {
 
-	p := Pattern{}
-	p.Initialize(5)
+	p := NewPattern(5)
 
 	p.SetBlack(3, 0)
 	p.SetBlack(2, 1)
@@ -15,11 +14,11 @@ func TestCanonical(t *testing.T) {
 	p.SetWhite(4, 2)
 	p.SetWhite(3, 3)
 
-	p.Canonical()
-	h1 := p.GetHashMax()
+	p.canonical()
+	h1 := p.GetHash()
 
 	p = Pattern{}
-	p.Initialize(5)
+	p.init(5)
 
 	p.SetWhite(1, 2)
 	p.SetWhite(2, 2)
@@ -27,10 +26,13 @@ func TestCanonical(t *testing.T) {
 	p.SetBlack(3, 3)
 	p.SetBlack(2, 4)
 
-	p.Canonical()
-	h2 := p.GetHashMax()
+	p.canonical()
+
+	h2 := p.GetHash()
 
 	if h1 != h2 {
 		t.Errorf("%v != %v", h1, h2)
 	}
+
+	p.string(p.black, p.white)
 }
