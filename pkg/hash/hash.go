@@ -74,7 +74,7 @@ func (p *Pattern) SetWhite(x, y int) {
 	p.white.Set(q)
 }
 
-func (p *Pattern) canonical() {
+func (p *Pattern) Canonical() {
 
 	l := uint(p.size * p.size)
 

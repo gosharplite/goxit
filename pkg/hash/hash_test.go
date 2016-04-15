@@ -14,7 +14,7 @@ func TestCanonical(t *testing.T) {
 	p.SetWhite(4, 2)
 	p.SetWhite(3, 3)
 
-	p.canonical()
+	p.Canonical()
 	h1 := p.GetHash()
 
 	p = Pattern{}
@@ -26,7 +26,7 @@ func TestCanonical(t *testing.T) {
 	p.SetBlack(3, 3)
 	p.SetBlack(2, 4)
 
-	p.canonical()
+	p.Canonical()
 
 	h2 := p.GetHash()
 
