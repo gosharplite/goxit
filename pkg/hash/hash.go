@@ -1,5 +1,5 @@
 /*
-Package hash provides a library for calculating a canonical hash value for a Go game pattern.
+Package hash provides a library for calculating a canonical hash value of a Go game pattern.
 
 Canonical hash value means same value will be found if the pattern is mirrored, rotated or color changed. Below patterns will have same hash value.
 
