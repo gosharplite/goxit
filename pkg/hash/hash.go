@@ -31,9 +31,6 @@ type Pattern struct {
 
 	black *bitset.BitSet
 	white *bitset.BitSet
-
-	blacks []*bitset.BitSet
-	whites []*bitset.BitSet
 }
 
 func NewPattern(size int) Pattern {
@@ -70,26 +67,26 @@ func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 
 	l := uint(p.size * p.size)
 
-	p.blacks = p.initBitSet(p.black, l)
-	p.whites = p.initBitSet(p.white, l)
+	blacks := p.initBitSet(p.black, l)
+	whites := p.initBitSet(p.white, l)
 
 	for i := uint(0); i < l; i++ {
 
 		if p.black.Test(i) {
-			p.translate(i, p.blacks)
+			p.translate(i, blacks)
 		}
 
 		if p.white.Test(i) {
-			p.translate(i, p.whites)
+			p.translate(i, whites)
 		}
 	}
 
 	// Reverse color
 	for i := 8; i < 16; i++ {
 
-		p.blacks[i] = p.whites[i-8]
+		blacks[i] = whites[i-8]
 
-		p.whites[i] = p.blacks[i-8]
+		whites[i] = blacks[i-8]
 	}
 
 	// Find canonical
@@ -100,7 +97,7 @@ func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 
 	for j := 1; j < 16; j++ {
 
-		a := p.combineBitSet(l, p.blacks[j], p.whites[j])
+		a := p.combineBitSet(l, blacks[j], whites[j])
 
 		b := bitset.New(l * 2)
 		b = b.Union(bwc)
@@ -114,8 +111,8 @@ func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 
 			if bwc.Test(uint(n)) == false {
 
-				bc = p.blacks[j]
-				wc = p.whites[j]
+				bc = blacks[j]
+				wc = whites[j]
 
 				bwc = a
 			}
