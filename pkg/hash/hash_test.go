@@ -39,3 +39,24 @@ func TestCanonical(t *testing.T) {
 	fmt.Printf("%v\n", h1)
 	fmt.Printf("%v", p.string(p.black, p.white))
 }
+
+var result int64
+
+func BenchmarkGetHash(b *testing.B) {
+
+	var h int64
+
+	p := NewPattern(19)
+
+	p.SetBlack(3, 0)
+	p.SetBlack(2, 1)
+	p.SetBlack(2, 2)
+	p.SetWhite(4, 2)
+	p.SetWhite(3, 3)
+
+	for n := 0; n < b.N; n++ {
+		h = p.GetHash()
+	}
+
+	result = h
+}
