@@ -1,6 +1,7 @@
 package hash
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -14,7 +15,6 @@ func TestCanonical(t *testing.T) {
 	p.SetWhite(4, 2)
 	p.SetWhite(3, 3)
 
-	p.Canonical()
 	h1 := p.GetHash()
 
 	p = Pattern{}
@@ -26,13 +26,16 @@ func TestCanonical(t *testing.T) {
 	p.SetBlack(3, 3)
 	p.SetBlack(2, 4)
 
-	p.Canonical()
-
 	h2 := p.GetHash()
 
 	if h1 != h2 {
 		t.Errorf("%v != %v", h1, h2)
 	}
 
-	p.string(p.black, p.white)
+	if h1 != 11305780 {
+		t.Errorf("%v != 11305780", h1)
+	}
+
+	fmt.Printf("%v\n", h1)
+	fmt.Printf("%v", p.string(p.black, p.white))
 }

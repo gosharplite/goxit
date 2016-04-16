@@ -12,8 +12,17 @@ Canonical hash value means same value will be found if the pattern is mirrored, 
 package hash
 
 import (
-	"fmt"
 	"github.com/willf/bitset"
+)
+
+var (
+	mirror = []int{1, 0, 0, -1}
+	rot90  = []int{0, -1, 1, 0}
+	rot180 = []int{-1, 0, 0, -1}
+	rot270 = []int{0, 1, -1, 0}
+
+	prime  int64 = 13
+	celing int64 = (9223372036854775807 - 4294967295) / prime
 )
 
 // A Pattern contains data of a Go game situation.
@@ -25,14 +34,6 @@ type Pattern struct {
 
 	blacks []*bitset.BitSet
 	whites []*bitset.BitSet
-
-	mirror []int
-	rot90  []int
-	rot180 []int
-	rot270 []int
-
-	prime  int64
-	celing int64
 }
 
 func NewPattern(size int) Pattern {
@@ -48,16 +49,7 @@ func (p *Pattern) init(size int) {
 	p.size = size
 
 	p.black = bitset.New(uint(size * size))
-
 	p.white = bitset.New(uint(size * size))
-
-	p.mirror = []int{1, 0, 0, -1}
-	p.rot90 = []int{0, -1, 1, 0}
-	p.rot180 = []int{-1, 0, 0, -1}
-	p.rot270 = []int{0, 1, -1, 0}
-
-	p.prime = 13
-	p.celing = (9223372036854775807 - 4294967295) / p.prime
 }
 
 func (p *Pattern) SetBlack(x, y int) {
@@ -74,7 +66,7 @@ func (p *Pattern) SetWhite(x, y int) {
 	p.white.Set(q)
 }
 
-func (p *Pattern) Canonical() {
+func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 
 	l := uint(p.size * p.size)
 
@@ -130,8 +122,7 @@ func (p *Pattern) Canonical() {
 		}
 	}
 
-	p.black = bc
-	p.white = wc
+	return bc, wc
 }
 
 func (p *Pattern) initBitSet(bitSet *bitset.BitSet, length uint) []*bitset.BitSet {
@@ -181,28 +172,28 @@ func (p *Pattern) translate(i uint, bitSet []*bitset.BitSet) {
 		switch j {
 
 		case 1:
-			xr = p.rot90[0]*xt + p.rot90[1]*yt
-			yr = p.rot90[2]*xt + p.rot90[3]*yt
+			xr = rot90[0]*xt + rot90[1]*yt
+			yr = rot90[2]*xt + rot90[3]*yt
 
 		case 2:
-			xr = p.rot180[0]*xt + p.rot180[1]*yt
-			yr = p.rot180[2]*xt + p.rot180[3]*yt
+			xr = rot180[0]*xt + rot180[1]*yt
+			yr = rot180[2]*xt + rot180[3]*yt
 
 		case 3:
-			xr = p.rot270[0]*xt + p.rot270[1]*yt
-			yr = p.rot270[2]*xt + p.rot270[3]*yt
+			xr = rot270[0]*xt + rot270[1]*yt
+			yr = rot270[2]*xt + rot270[3]*yt
 
 		case 5:
-			xr = p.rot90[0]*xt + p.rot90[1]*yt
-			yr = p.rot90[2]*xt + p.rot90[3]*yt
+			xr = rot90[0]*xt + rot90[1]*yt
+			yr = rot90[2]*xt + rot90[3]*yt
 
 		case 6:
-			xr = p.rot180[0]*xt + p.rot180[1]*yt
-			yr = p.rot180[2]*xt + p.rot180[3]*yt
+			xr = rot180[0]*xt + rot180[1]*yt
+			yr = rot180[2]*xt + rot180[3]*yt
 
 		case 7:
-			xr = p.rot270[0]*xt + p.rot270[1]*yt
-			yr = p.rot270[2]*xt + p.rot270[3]*yt
+			xr = rot270[0]*xt + rot270[1]*yt
+			yr = rot270[2]*xt + rot270[3]*yt
 		}
 
 		// Horizontal mirror.
@@ -210,8 +201,8 @@ func (p *Pattern) translate(i uint, bitSet []*bitset.BitSet) {
 		yh := yr
 
 		if j > 3 {
-			xh = p.mirror[0]*xr + p.mirror[1]*yr
-			yh = p.mirror[2]*xr + p.mirror[3]*yr
+			xh = mirror[0]*xr + mirror[1]*yr
+			yh = mirror[2]*xr + mirror[3]*yr
 		}
 
 		// Translation inverse.
@@ -231,7 +222,6 @@ func (p *Pattern) combineBitSet(length uint, b1 *bitset.BitSet, b2 *bitset.BitSe
 	r = r.Union(b2)
 
 	for i := p.nextSetBit(0, b1); i >= 0; i = p.nextSetBit(i+1, b1) {
-		// operate on index i here
 		r.Set(uint(i) + length)
 	}
 
@@ -243,11 +233,8 @@ func (p *Pattern) nextSetBit(index int, b *bitset.BitSet) int {
 	r := -1
 
 	for i := index; i < p.size*p.size; i++ {
-
 		if b.Test(uint(i)) {
-
 			r = int(i)
-
 			break
 		}
 	}
@@ -257,20 +244,22 @@ func (p *Pattern) nextSetBit(index int, b *bitset.BitSet) int {
 
 func (p *Pattern) GetHash() int64 {
 
-	b := p.bit2long(p.black)
-	w := p.bit2long(p.white)
+	bc, wc := p.canonical()
+
+	b := p.bit2long(bc)
+	w := p.bit2long(wc)
 
 	r := int64(1)
 
 	for i := 0; i < len(b); i++ {
-		r = (p.prime*r + b[i]) % p.celing
+		r = (prime*r + b[i]) % celing
 	}
 
 	for i := 0; i < len(w); i++ {
-		r = (p.prime*r + w[i]) % p.celing
+		r = (prime*r + w[i]) % celing
 	}
 
-	r = p.prime*r + int64(p.size)
+	r = prime*r + int64(p.size)
 
 	return r
 }
@@ -307,9 +296,9 @@ func (p *Pattern) bit2long(b *bitset.BitSet) []int64 {
 	return r
 }
 
-func (p *Pattern) string(b1 *bitset.BitSet, b2 *bitset.BitSet) {
+func (p *Pattern) string(b1 *bitset.BitSet, b2 *bitset.BitSet) string {
 
-	var line string
+	var r string
 
 	l := uint(p.size * p.size)
 
@@ -327,12 +316,12 @@ func (p *Pattern) string(b1 *bitset.BitSet, b2 *bitset.BitSet) {
 			c = "."
 		}
 
-		if i%uint(p.size) == 0 && i != 0 {
-			fmt.Printf("%v\n", line)
-			line = c
-		} else {
+		r += c
 
-			line += c
+		if (i+1)%uint(p.size) == 0 && i != 0 {
+			r += "\n"
 		}
 	}
+
+	return r
 }
