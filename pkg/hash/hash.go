@@ -8,6 +8,14 @@ Canonical hash value means same value will be found if the pattern is mirrored, 
 	..X.O	..O.X	X.O..	.OO..
 	...O.	...X.	.X...	O..X.
 	.....	.....	.....	..X..
+
+The edge of the board can be modeled by setting both black and white at the same location.
+
+	.#..O	.....	.....
+	.#.X.	.####	####.
+	.#.X.	.#...	...#.
+	.####	.#XX.	.OO#.
+	.....	.#..O	X..#.
 */
 package hash
 
