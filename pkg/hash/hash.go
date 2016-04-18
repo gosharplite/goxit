@@ -257,16 +257,21 @@ func (p *Pattern) GetHash() int64 {
 	r := int64(1)
 
 	for i := 0; i < len(b); i++ {
-		r = (prime*r + b[i]) % celing
+		r = hash(r, b[i])
 	}
 
 	for i := 0; i < len(w); i++ {
-		r = (prime*r + w[i]) % celing
+		r = hash(r, w[i])
 	}
 
-	r = prime*r + int64(p.size)
+	r = hash(r, int64(p.size))
 
 	return r
+}
+
+func hash(r, v int64) int64 {
+
+	return (prime*r + v) % celing
 }
 
 func (p *Pattern) bit2long(b *bitset.BitSet) []int64 {
