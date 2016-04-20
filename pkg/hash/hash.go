@@ -29,8 +29,10 @@ var (
 	rot180 = []int{-1, 0, 0, -1}
 	rot270 = []int{0, 1, -1, 0}
 
-	prime  int64 = 13
-	celing int64 = (9223372036854775807 - 4294967295) / prime
+	prime uint64 = 13
+
+	// uint64 max 18446744073709551615
+	celing uint64 = 18446744073709551615 / 2 / prime
 )
 
 // A Pattern contains data of a Go game situation.
@@ -71,75 +73,6 @@ func (p *Pattern) SetWhite(x, y int) {
 	p.white.Set(q)
 }
 
-func (p *Pattern) performance() {
-
-	l := uint(p.size * p.size)
-
-	blacks := p.initBitSet(p.black, l)
-	whites := p.initBitSet(p.white, l)
-
-	//BenchmarkPerformance-4	  300000	      5674 ns/op
-	//BenchmarkGetHash-4    	   30000	     52825 ns/op
-
-	for i := uint(0); i < l; i++ {
-
-		if p.black.Test(i) {
-			p.translate(i, blacks)
-		}
-
-		if p.white.Test(i) {
-			p.translate(i, whites)
-		}
-	}
-
-	//BenchmarkPerformance-4	  200000	      8275 ns/op
-	//BenchmarkGetHash-4    	   30000	     52144 ns/op
-
-	for i := 8; i < 16; i++ {
-
-		blacks[i] = whites[i-8]
-
-		whites[i] = blacks[i-8]
-	}
-
-	//BenchmarkPerformance-4	  200000	      8633 ns/op
-	//BenchmarkGetHash-4    	   30000	     47608 ns/op
-
-	bc := p.black
-	wc := p.white
-
-	bwc := p.combineBitSet(l, bc, wc)
-
-	//BenchmarkPerformance-4	  200000	      9687 ns/op
-	//BenchmarkGetHash-4    	   30000	     51423 ns/op
-
-	for j := 1; j < 16; j++ {
-
-		a := p.combineBitSet(l, blacks[j], whites[j])
-
-		b := bwc.Clone()
-
-		// Find different bits.
-		b = b.SymmetricDifference(a)
-
-		// Check first true bit.
-		n := p.nextSetBit(0, b)
-		if n > 0 {
-
-			if bwc.Test(uint(n)) == false {
-
-				bc = blacks[j]
-				wc = whites[j]
-
-				bwc = a
-			}
-		}
-	}
-
-	//BenchmarkPerformance-4	   20000	     55933 ns/op
-	//BenchmarkGetHash-4    	   30000	     51546 ns/op
-}
-
 func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 
 	l := uint(p.size * p.size)
@@ -170,11 +103,11 @@ func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 	bc := p.black
 	wc := p.white
 
-	bwc := p.combineBitSet(l, bc, wc)
+	bwc := p.combineBitSet(bc, wc)
 
 	for j := 1; j < 16; j++ {
 
-		a := p.combineBitSet(l, blacks[j], whites[j])
+		a := p.combineBitSet(blacks[j], whites[j])
 
 		b := bwc.Clone()
 
@@ -288,17 +221,9 @@ func (p *Pattern) translate(i uint, bitSet []*bitset.BitSet) {
 	}
 }
 
-func (p *Pattern) combineBitSet(length uint, b1 *bitset.BitSet, b2 *bitset.BitSet) *bitset.BitSet {
+func (p *Pattern) combineBitSet(b1 *bitset.BitSet, b2 *bitset.BitSet) *bitset.BitSet {
 
-	r := bitset.New(length * 2)
-
-	r = r.Union(b2)
-
-	for i := p.nextSetBit(0, b1); i >= 0; i = p.nextSetBit(i+1, b1) {
-		r.Set(uint(i) + length)
-	}
-
-	return r
+	return bitset.From(append(b2.Bytes(), b1.Bytes()...))
 }
 
 func (p *Pattern) nextSetBit(index int, b *bitset.BitSet) int {
@@ -315,14 +240,14 @@ func (p *Pattern) nextSetBit(index int, b *bitset.BitSet) int {
 	return r
 }
 
-func (p *Pattern) GetHash() int64 {
+func (p *Pattern) GetHash() uint64 {
 
 	bc, wc := p.canonical()
 
-	b := p.bit2long(bc)
-	w := p.bit2long(wc)
+	b := bc.Bytes()
+	w := wc.Bytes()
 
-	r := int64(1)
+	r := uint64(1)
 
 	for i := 0; i < len(b); i++ {
 		r = hash(r, b[i])
@@ -332,46 +257,14 @@ func (p *Pattern) GetHash() int64 {
 		r = hash(r, w[i])
 	}
 
-	r = hash(r, int64(p.size))
+	r = hash(r, uint64(p.size))
 
 	return r
 }
 
-func hash(r, v int64) int64 {
+func hash(r, v uint64) uint64 {
 
-	return (prime*r + v) % celing
-}
-
-func (p *Pattern) bit2long(b *bitset.BitSet) []int64 {
-
-	l := uint(p.size * p.size)
-
-	// This is to include all bits.
-	var s uint
-	if l%32 == 0 {
-		s = l / 32
-	} else {
-		s = l/32 + 1
-	}
-
-	r := make([]int64, s)
-
-	for i := 0; i < int(s); i++ {
-
-		for j := 0; j < 32; j++ {
-
-			n := i*32 + j
-
-			if uint(n) < l {
-				if b.Test(uint(n)) {
-					// Max is 4294967295L
-					r[i] |= 1 << uint(j)
-				}
-			}
-		}
-	}
-
-	return r
+	return (prime*r + v/2) % celing
 }
 
 func (p *Pattern) string(b1 *bitset.BitSet, b2 *bitset.BitSet) string {

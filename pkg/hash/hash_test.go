@@ -19,7 +19,7 @@ func TestTime(t *testing.T) {
 
 func TestCanonical(t *testing.T) {
 
-	p := NewPattern(5)
+	p := NewPattern(19)
 
 	p.SetBlack(3, 0)
 	p.SetBlack(2, 1)
@@ -30,13 +30,13 @@ func TestCanonical(t *testing.T) {
 	h1 := p.GetHash()
 
 	p = Pattern{}
-	p.init(5)
+	p.init(19)
 
-	p.SetWhite(1, 2)
-	p.SetWhite(2, 2)
-	p.SetWhite(0, 3)
-	p.SetBlack(3, 3)
-	p.SetBlack(2, 4)
+	p.SetWhite(18, 15)
+	p.SetWhite(17, 16)
+	p.SetWhite(16, 16)
+	p.SetBlack(16, 14)
+	p.SetBlack(15, 15)
 
 	h2 := p.GetHash()
 
@@ -44,28 +44,16 @@ func TestCanonical(t *testing.T) {
 		t.Errorf("%v != %v", h1, h2)
 	}
 
-	if h1 != 11305780 {
-		t.Errorf("%v != 11305780", h1)
-	}
-
-	//fmt.Printf("%v\n", h1)
-	//fmt.Printf("%v", p.string(p.black, p.white))
-}
-
-func BenchmarkPerformance(b *testing.B) {
-
-	p := NewPattern(19)
-
-	for n := 0; n < b.N; n++ {
-		p.performance()
+	if h1 != 79471947460759914 {
+		t.Errorf("%v != 79471947460759914", h1)
 	}
 }
 
-var result int64
+var result uint64
 
 func BenchmarkGetHash(b *testing.B) {
 
-	var h int64
+	var h uint64
 
 	p := NewPattern(19)
 
