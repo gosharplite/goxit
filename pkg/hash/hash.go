@@ -71,6 +71,75 @@ func (p *Pattern) SetWhite(x, y int) {
 	p.white.Set(q)
 }
 
+func (p *Pattern) performance() {
+
+	l := uint(p.size * p.size)
+
+	blacks := p.initBitSet(p.black, l)
+	whites := p.initBitSet(p.white, l)
+
+	//BenchmarkPerformance-4	  300000	      5674 ns/op
+	//BenchmarkGetHash-4    	   30000	     52825 ns/op
+
+	for i := uint(0); i < l; i++ {
+
+		if p.black.Test(i) {
+			p.translate(i, blacks)
+		}
+
+		if p.white.Test(i) {
+			p.translate(i, whites)
+		}
+	}
+
+	//BenchmarkPerformance-4	  200000	      8275 ns/op
+	//BenchmarkGetHash-4    	   30000	     52144 ns/op
+
+	for i := 8; i < 16; i++ {
+
+		blacks[i] = whites[i-8]
+
+		whites[i] = blacks[i-8]
+	}
+
+	//BenchmarkPerformance-4	  200000	      8633 ns/op
+	//BenchmarkGetHash-4    	   30000	     47608 ns/op
+
+	bc := p.black
+	wc := p.white
+
+	bwc := p.combineBitSet(l, bc, wc)
+
+	//BenchmarkPerformance-4	  200000	      9687 ns/op
+	//BenchmarkGetHash-4    	   30000	     51423 ns/op
+
+	for j := 1; j < 16; j++ {
+
+		a := p.combineBitSet(l, blacks[j], whites[j])
+
+		b := bwc.Clone()
+
+		// Find different bits.
+		b = b.SymmetricDifference(a)
+
+		// Check first true bit.
+		n := p.nextSetBit(0, b)
+		if n > 0 {
+
+			if bwc.Test(uint(n)) == false {
+
+				bc = blacks[j]
+				wc = whites[j]
+
+				bwc = a
+			}
+		}
+	}
+
+	//BenchmarkPerformance-4	   20000	     55933 ns/op
+	//BenchmarkGetHash-4    	   30000	     51546 ns/op
+}
+
 func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 
 	l := uint(p.size * p.size)
@@ -107,15 +176,14 @@ func (p *Pattern) canonical() (black *bitset.BitSet, white *bitset.BitSet) {
 
 		a := p.combineBitSet(l, blacks[j], whites[j])
 
-		b := bitset.New(l * 2)
-		b = b.Union(bwc)
+		b := bwc.Clone()
 
 		// Find different bits.
 		b = b.SymmetricDifference(a)
 
 		// Check first true bit.
 		n := p.nextSetBit(0, b)
-		if n >= 0 {
+		if n > 0 {
 
 			if bwc.Test(uint(n)) == false {
 

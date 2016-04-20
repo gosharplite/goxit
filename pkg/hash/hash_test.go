@@ -1,9 +1,21 @@
 package hash
 
 import (
-	"fmt"
 	"testing"
 )
+
+func TestTime(t *testing.T) {
+
+	p := NewPattern(19)
+
+	p.SetBlack(3, 0)
+	p.SetBlack(2, 1)
+	p.SetBlack(2, 2)
+	p.SetWhite(4, 2)
+	p.SetWhite(3, 3)
+
+	p.GetHash()
+}
 
 func TestCanonical(t *testing.T) {
 
@@ -36,8 +48,17 @@ func TestCanonical(t *testing.T) {
 		t.Errorf("%v != 11305780", h1)
 	}
 
-	fmt.Printf("%v\n", h1)
-	fmt.Printf("%v", p.string(p.black, p.white))
+	//fmt.Printf("%v\n", h1)
+	//fmt.Printf("%v", p.string(p.black, p.white))
+}
+
+func BenchmarkPerformance(b *testing.B) {
+
+	p := NewPattern(19)
+
+	for n := 0; n < b.N; n++ {
+		p.performance()
+	}
 }
 
 var result int64
