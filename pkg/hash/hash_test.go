@@ -1,8 +1,21 @@
 package hash
 
 import (
+	"github.com/willf/bitset"
 	"testing"
 )
+
+func TestUnion(t *testing.T) {
+
+	a := bitset.From([]uint64{0, 1})
+	b := bitset.From([]uint64{1})
+
+	a.Union(b)
+
+	if len(a.Bytes()) != 2 {
+		t.Error("Union should not modify current object")
+	}
+}
 
 func TestTime(t *testing.T) {
 
