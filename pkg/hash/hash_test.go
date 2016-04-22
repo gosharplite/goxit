@@ -57,8 +57,8 @@ func TestCanonical(t *testing.T) {
 		t.Errorf("%v != %v", h1, h2)
 	}
 
-	if h1 != 79471947460759914 {
-		t.Errorf("%v != 79471947460759914", h1)
+	if h1 != 158641019814927576 {
+		t.Errorf("%v != 158641019814927576", h1)
 	}
 }
 

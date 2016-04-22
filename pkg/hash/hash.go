@@ -29,10 +29,10 @@ var (
 	rot180 = []int{-1, 0, 0, -1}
 	rot270 = []int{0, 1, -1, 0}
 
-	prime uint64 = 13
-
-	// uint64 max 18446744073709551615
-	celing uint64 = 18446744073709551615 / 2 / prime
+	maxUint64 uint64 = 18446744073709551615
+	prime     uint64 = 13
+	wordLimit uint64 = maxUint64 / 2
+	celing    uint64 = wordLimit / prime
 )
 
 // A Pattern contains data of a Go game situation.
@@ -264,7 +264,7 @@ func (p *Pattern) GetHash() uint64 {
 
 func hash(r, v uint64) uint64 {
 
-	return (prime*r + v/2) % celing
+	return (prime*r + v%wordLimit) % celing
 }
 
 func (p *Pattern) string(b1 *bitset.BitSet, b2 *bitset.BitSet) string {
